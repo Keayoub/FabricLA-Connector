@@ -423,3 +423,5 @@ infra/terraform/modules/
 infra/terraform/.terraform/
 .github/instructions/
 
+fabricla_connector.egg-info/
+
