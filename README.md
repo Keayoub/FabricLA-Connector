@@ -1,26 +1,98 @@
-# Fabric Monitoring Solution for Azure Log Analytics
+# FabricLA-Connector: Microsoft Fabric Log Analytics Framework
 
-A comprehensive monitoring solution that collects data from Microsoft Fabric REST APIs and sends it to Azure Log Analytics for analysis, alerting, and dashboarding.
+A comprehensive **Python framework and monitoring solution** that collects data from Microsoft Fabric REST APIs and sends it to Azure Log Analytics for analysis, alerting, and dashboarding.
 
-**🚀 Complete Solution**: Infrastructure deployment + Data collection notebooks + Environment setup
+**🚀 Complete Solution**: Infrastructure deployment + Python framework + Data collection notebooks + Environment setup
+
+## ✨ **New in v1.0.0 - Framework Integration**
+- **🔧 Python Package**: Installable framework (`pip install -e .`) with modular components
+- **📦 High-Level Workflows**: One-line functions for common monitoring scenarios  
+- **🛡️ Enhanced Error Handling**: Comprehensive retry logic, rate limiting, and troubleshooting
+- **📊 Size-Aware Batching**: Automatic chunking to prevent "Payload Too Large" errors
+- **🔐 Fabric-Aware Authentication**: Auto-detection of Fabric runtime with workspace identity
+- **📋 Framework Integration**: All notebooks now use the consolidated framework
+- **🚀 Quick Start Examples**: `framework_quickstart_example.ipynb` for easy onboarding
 
 ## 📊 Monitoring Capabilities
 
 This solution provides end-to-end monitoring for:
+
 - **Pipeline & Dataflow Executions**: Success/failure rates, performance metrics, activity runs
 - **Dataset Refresh Operations**: Refresh status, duration, error tracking, metadata
 - **User Activity Tracking**: Access patterns, usage analytics, security monitoring  
 - **Capacity Utilization**: Resource consumption, workload distribution, throttling events
 
+## 🔧 **Framework Components** (`/src/fabricla_connector/`)
+
+### **Core Framework Modules**
+
+| Module | Purpose | Key Classes/Functions |
+|--------|---------|----------------------|
+| `workflows.py` | **High-level workflows** | `collect_and_ingest_pipeline_data()`, `run_full_monitoring_cycle()` |
+| `collectors.py` | **Data collection** | `PipelineCollector`, `DatasetCollector`, `UserActivityCollector`, `CapacityCollector` |
+| `ingestion.py` | **Enhanced ingestion** | `FabricIngestion`, `post_rows_to_dcr_enhanced()`, size-aware batching |
+| `api.py` | **Fabric API client** | `FabricAPIClient`, authentication, rate limiting |
+| `config.py` | **Configuration management** | Environment variables, Key Vault integration, validation |
+| `utils.py` | **Utility functions** | Date handling, chunking, troubleshooting reports |
+
+### **Framework Installation**
+
+```bash
+# Install as editable package (recommended for development)
+pip install -e .
+
+# Or install from source
+pip install .
+```
+
+### **Quick Start with Framework**
+
+```python
+# Simple workflow - one line data collection
+from fabricla_connector.workflows import collect_and_ingest_pipeline_data_enhanced
+
+result = collect_and_ingest_pipeline_data_enhanced(
+    workspace_id="your-workspace-id",
+    lookback_minutes=1440,  # 24 hours
+    troubleshoot=True
+)
+
+# Advanced usage with individual components
+from fabricla_connector.api import FabricAPIClient
+from fabricla_connector.collectors import PipelineCollector
+from fabricla_connector.ingestion import FabricIngestion
+
+fabric_client = FabricAPIClient()
+collector = PipelineCollector(fabric_client)
+ingestion = FabricIngestion(
+    endpoint_host="https://your-dce.monitor.azure.com",
+    dcr_id="your-dcr-id",
+    stream_name="Custom-FabricPipelineRun_CL"
+)
+
+data = collector.collect_pipeline_runs(workspace_id, lookback_minutes=1440)
+result = ingestion.ingest_enhanced(records=data, troubleshoot=True)
+```
+
 ## 📁 Solution Components
 
-### 🔧 **Data Collection Notebooks** (`/notebooks/`)
-| Notebook | Purpose | Key Features |
-|----------|---------|--------------|
-| `fabric_pipeline_dataflow_collector.ipynb` | **Pipeline & Dataflow Monitoring** | Activity runs, performance metrics, error tracking |
-| `fabric_dataset_refresh_monitoring.ipynb` | **Dataset Refresh Operations** | Refresh history, metadata collection, auto-discovery |
-| `fabric_user_activity_monitoring.ipynb` | **User Activity Tracking** | Access logs, usage patterns, security monitoring |
-| `fabric_capacity_utilization_monitoring.ipynb` | **Capacity & Workload Monitoring** | Resource utilization, throttling, workload distribution |
+### 🔧 **Data Collection Notebooks** (`/notebooks/`) - **Framework Integrated**
+
+| Notebook | Purpose | Framework Integration |
+|----------|---------|----------------------|
+| `framework_quickstart_example.ipynb` | **Getting Started Guide** | ✅ Complete framework demo with examples |
+| `fabric_pipeline_dataflow_collector.ipynb` | **Pipeline & Dataflow Monitoring** | ✅ `PipelineCollector` + `DataflowCollector` + enhanced ingestion |
+| `fabric_dataset_refresh_monitoring.ipynb` | **Dataset Refresh Operations** | ✅ `DatasetCollector` + refresh analytics + troubleshooting |
+| `fabric_user_activity_monitoring.ipynb` | **User Activity Tracking** | ✅ `UserActivityCollector` + privacy compliance + engagement analytics |
+| `fabric_capacity_utilization_monitoring.ipynb` | **Capacity & Workload Monitoring** | ✅ `CapacityCollector` + optimization guidance + cost analysis |
+
+**✨ All notebooks now use the consolidated framework with:**
+- 🔧 **One-line workflows** for quick data collection
+- 🛡️ **Enhanced error handling** with specific guidance for 401/403/429 errors
+- 📊 **Size-aware batching** to prevent "Payload Too Large" errors
+- 🔄 **Automatic retry logic** with exponential backoff
+- 📋 **Comprehensive troubleshooting** with actionable recommendations
+- 🚀 **Framework consistency** - no more duplicate code between notebooks
 
 ### 🏗️ **Infrastructure Deployment**
 | Component | Technology | Purpose |
@@ -50,7 +122,21 @@ The solution creates these custom tables in Log Analytics:
 
 ## 🚀 Quick Start
 
-### 1. **Deploy Infrastructure**
+### 1. **Install Framework** ⚡ **NEW**
+
+```bash
+# Clone repository
+git clone https://github.com/Keayoub/FabricLA-Connector.git
+cd FabricLA-Connector
+
+# Install framework as editable package
+pip install -e .
+
+# Or install dependencies
+pip install -r requirements.txt
+```
+
+### 2. **Deploy Infrastructure**
 
 **Option A: Using Bicep**
 ```bash
@@ -111,8 +197,33 @@ AZURE_KEY_VAULT_SECRET_NAME=FabricServicePrincipal
 
 ### 4. **Run Monitoring**
 
+**✨ NEW: Choose your preferred approach**
+
+**Option A: Framework Workflows (Recommended)**
+```python
+# Simple one-line data collection
+from fabricla_connector.workflows import collect_and_ingest_pipeline_data_enhanced
+
+result = collect_and_ingest_pipeline_data_enhanced(
+    workspace_id="your-workspace-id",
+    lookback_minutes=1440,  # 24 hours
+    troubleshoot=True
+)
+
+# Full monitoring cycle
+from fabricla_connector.workflows import run_full_monitoring_cycle
+
+full_result = run_full_monitoring_cycle(
+    workspace_id="your-workspace-id",
+    capacity_id="your-capacity-id"
+)
+```
+
+**Option B: Individual Notebooks**
 Execute the notebooks based on your monitoring needs:
-- **Start with**: `fabric_pipeline_dataflow_collector.ipynb` (most comprehensive)
+
+- **Start with**: `framework_quickstart_example.ipynb` (learn the framework)
+- **For comprehensive monitoring**: `fabric_pipeline_dataflow_collector.ipynb`
 - **For dataset monitoring**: `fabric_dataset_refresh_monitoring.ipynb`
 - **For user analytics**: `fabric_user_activity_monitoring.ipynb`  
 - **For capacity monitoring**: `fabric_capacity_utilization_monitoring.ipynb`
@@ -181,7 +292,33 @@ FabricUserActivity_CL
 | render timechart
 ```
 
-## 🔧 Configuration Options
+## � Framework Benefits & Features ⚡ **NEW in v1.0.0**
+
+### **✨ Enhanced Reliability**
+- **🛡️ Smart Error Handling**: Specific guidance for HTTP 401, 403, 404, 429 errors with actionable recommendations
+- **🔄 Automatic Retry Logic**: Exponential backoff for transient failures (429 rate limits, network issues)
+- **📊 Size-Aware Batching**: Prevents "Payload Too Large" errors by automatically chunking large datasets (950KB JSON limit)
+- **⚡ Connection Pooling**: Efficient API calls with connection reuse and timeout management
+
+### **🔧 Developer Experience**
+- **📦 Installable Package**: `pip install -e .` for easy framework installation and updates
+- **🚀 One-Line Workflows**: `collect_and_ingest_pipeline_data_enhanced()` for quick data collection
+- **🧪 Modular Components**: Mix and match collectors, ingestion, and authentication for custom scenarios
+- **📋 Comprehensive Troubleshooting**: Detailed reports with configuration validation and actionable recommendations
+
+### **🔐 Enhanced Authentication**
+- **🏢 Fabric-Aware**: Auto-detection of Fabric runtime with workspace identity (`notebookutils.credentials`)
+- **🔑 Managed Identity**: Seamless authentication in Azure environments (VMs, Container Apps, Functions)
+- **🔒 Key Vault Integration**: Secure credential storage with automatic retrieval
+- **⚙️ Environment Detection**: Smart switching between local development and production configurations
+
+### **📊 Advanced Monitoring**
+- **📈 Progress Tracking**: Real-time progress indicators for large data collections
+- **🕒 Execution Timing**: Performance metrics for all operations
+- **📋 Troubleshooting Reports**: Automatic generation of diagnostic information
+- **🔍 Data Validation**: Schema validation and data quality checks before ingestion
+
+## �🔧 Configuration Options
 
 ### **Lookback Windows**
 - **Pipeline/Dataflow**: 1200 minutes (20 hours) for regular monitoring
@@ -257,11 +394,34 @@ All notebooks support auto-discovery:
 
 ---
 
-**📅 Last Updated**: September 2025
-**🔧 Version**: v2.0 - Streamlined 5-cell architecture with auto-discovery
-**📚 Documentation**: See individual notebook README files for detailed configuration
+**📅 Last Updated**: September 2025  
+**🔧 Version**: v1.0.0 - **Framework Integration with Enhanced Features**  
+**🚀 Major Updates**: 
+- ✅ **Complete framework consolidation** with installable Python package
+- ✅ **All notebooks migrated** to use framework with one-line workflows  
+- ✅ **Enhanced error handling** with smart retry logic and size-aware batching
+- ✅ **Fabric-aware authentication** with auto-detection and managed identity support
+- ✅ **Comprehensive troubleshooting** with actionable recommendations and validation
+- ✅ **Modular architecture** for custom monitoring scenarios
+
+**📚 Documentation**: See individual notebook README files for detailed configuration  
+**🆕 Getting Started**: Start with `framework_quickstart_example.ipynb` to learn the framework
 
 **💡 Need Help?** Check the troubleshooting sections in individual notebooks or create an issue in the repository.
+
+---
+
+## 🔄 Migration from Previous Versions
+
+If you're upgrading from previous versions:
+
+1. **Install the framework**: `pip install -e .`
+2. **Update notebooks**: All notebooks now use framework imports
+3. **Review configuration**: Environment variables remain the same
+4. **Test workflows**: Use `framework_quickstart_example.ipynb` to verify setup
+5. **Migrate custom code**: Use the new modular collectors and workflows for custom scenarios
+
+The framework maintains backward compatibility while providing enhanced features and reliability.
 
 Choose your authentication method based on your deployment environment:
 

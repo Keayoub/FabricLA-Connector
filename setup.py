@@ -32,7 +32,7 @@ def read_requirements():
 setup(
     name="fabricla-connector",
     version="1.0.0",
-    author="Microsoft Fabric Monitoring Team",
+    author="Ayoub KEBAILI",
     description="A comprehensive framework for collecting and ingesting Microsoft Fabric monitoring data",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
