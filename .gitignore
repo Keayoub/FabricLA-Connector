@@ -424,5 +424,10 @@ infra/terraform/.terraform/
 .github/instructions/
 
 fabricla_connector.egg-info/
-src/fabricla_connector.egg.info/
+src/fabricla_connector.egg-info/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
 

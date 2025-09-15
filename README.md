@@ -12,6 +12,7 @@ A comprehensive **Python framework and monitoring solution** that collects data 
 - **🔐 Fabric-Aware Authentication**: Auto-detection of Fabric runtime with workspace identity
 - **📋 Framework Integration**: All notebooks now use the consolidated framework
 - **🚀 Quick Start Examples**: `framework_quickstart_example.ipynb` for easy onboarding
+- **🎯 CI/CD Pipeline**: Automated wheel building and deployment to Fabric environments
 
 ## 📊 Monitoring Capabilities
 
@@ -124,6 +125,14 @@ The solution creates these custom tables in Log Analytics:
 
 ### 1. **Install Framework** ⚡ **NEW**
 
+**Option A: Install from wheel (Recommended for Fabric)**
+```bash
+# Download latest wheel from GitHub releases
+# Or use the automated deployment pipeline (see CI/CD section below)
+pip install fabricla_connector-1.0.0-py3-none-any.whl
+```
+
+**Option B: Install from source**
 ```bash
 # Clone repository
 git clone https://github.com/Keayoub/FabricLA-Connector.git
@@ -135,6 +144,32 @@ pip install -e .
 # Or install dependencies
 pip install -r requirements.txt
 ```
+
+### 1.1 **Automated Deployment to Fabric** 🎯 **NEW**
+
+The repository includes a GitHub Actions workflow that automatically builds and deploys the package to your Fabric environment:
+
+**Setup CI/CD Pipeline:**
+1. Configure GitHub secrets:
+   - `FABRIC_TENANT_ID`: Your Azure AD tenant ID
+   - `FABRIC_CLIENT_ID`: Service principal client ID  
+   - `FABRIC_CLIENT_SECRET`: Service principal secret
+   - `FABRIC_WORKSPACE_ID`: Target Fabric workspace ID
+
+2. The workflow automatically triggers on:
+   - Push to `main` or `develop` branches
+   - Tagged releases (`v*`)
+   - Manual trigger with custom parameters
+
+3. After deployment, use in Fabric notebooks:
+```python
+from fabricla_connector import (
+    acquire_token, get_capacities, get_workspaces,
+    collect_capacity_metrics, post_rows_to_dcr
+)
+```
+
+See [GitHub Actions README](.github/README.md) for detailed setup instructions.
 
 ### 2. **Deploy Infrastructure**
 
