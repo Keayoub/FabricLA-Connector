@@ -169,7 +169,44 @@ from fabricla_connector import (
 )
 ```
 
-See [GitHub Actions README](.github/README.md) for detailed setup instructions.
+## Deployment Workflow Usage
+
+### Testing Your Setup
+
+Before using the automated deployment, validate your configuration:
+
+```bash
+# Test your GitHub Actions setup
+python .github/scripts/test-deployment-setup.py
+
+# Skip authentication test if dependencies aren't installed locally
+python .github/scripts/test-deployment-setup.py --skip-auth-test
+```
+
+### Manual Deployment
+
+You can manually trigger the deployment workflow:
+
+1. Go to **Actions** tab in your GitHub repository
+2. Select **Build and Upload FabricLA-Connector to Fabric Environment**
+3. Click **Run workflow**
+4. Optionally specify custom parameters
+
+### Automatic Deployment
+
+The workflow automatically deploys on:
+- Push to `main` or `develop` branches
+- Tagged releases (`v1.0.0`, `v1.1.0`, etc.)
+
+## Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `.github/workflows/build-and-upload-to-fabric.yml` | Main deployment workflow |
+| `.github/scripts/upload-to-fabric.py` | Fabric upload logic |
+| `.github/scripts/test-deployment-setup.py` | Setup validation tool |
+| `.github/secrets.env.template` | GitHub secrets template |
+| `.github/README.md` | Detailed deployment documentation |
 
 ### 2. **Deploy Infrastructure**
 
