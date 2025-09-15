@@ -1,0 +1,107 @@
+name: Build and Publish Wheel to Fabric
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip build wheel
+
+      - name: Build wheel
+        run: |
+          python -m build --wheel --no-isolation
+
+      - name: Upload wheel artifact (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-wheel
+          path: dist/*.whl
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload wheel to Azure Blob Storage
+        uses: azure/storage-blob-upload@v1
+        with:
+          connection-string: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          container-name: ${{ secrets.AZURE_STORAGE_CONTAINER }}
+          source: dist/*.whl
+          overwrite: true
+
+      - name: Upload wheel to Fabric Environment (optional)
+        if: ${{ env.FABRIC_WORKSPACE_ID != '' && env.FABRIC_ENVIRONMENT_ID != '' }}
+        env:
+          FABRIC_WORKSPACE_ID: ${{ secrets.FABRIC_WORKSPACE_ID }}
+          FABRIC_ENVIRONMENT_ID: ${{ secrets.FABRIC_ENVIRONMENT_ID }}
+          FABRIC_TOKEN: ${{ secrets.FABRIC_TOKEN }}
+          # Optional: Client credentials for service principal auth
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          set -e
+          WHEEL_FILE=$(ls dist/*.whl | head -n1)
+          echo "🚀 Uploading $WHEEL_FILE to Fabric Environment"
+          
+          # Install azure-identity for DefaultAzureCredential
+          pip install azure-identity
+          
+          # Try different authentication methods
+          if [ -n "$FABRIC_TOKEN" ]; then
+            echo "Using provided bearer token"
+            python tools/upload_wheel_to_fabric.py \
+              --file "$WHEEL_FILE" \
+              --workspace-id "$FABRIC_WORKSPACE_ID" \
+              --environment-id "$FABRIC_ENVIRONMENT_ID" \
+              --token "$FABRIC_TOKEN"
+          elif [ -n "$AZURE_CLIENT_ID" ] && [ -n "$AZURE_CLIENT_SECRET" ] && [ -n "$AZURE_TENANT_ID" ]; then
+            echo "Using client credentials authentication"
+            python tools/upload_wheel_to_fabric.py \
+              --file "$WHEEL_FILE" \
+              --workspace-id "$FABRIC_WORKSPACE_ID" \
+              --environment-id "$FABRIC_ENVIRONMENT_ID" \
+              --client-id "$AZURE_CLIENT_ID" \
+              --client-secret "$AZURE_CLIENT_SECRET" \
+              --tenant-id "$AZURE_TENANT_ID"
+          else
+            echo "Using DefaultAzureCredential (GitHub OIDC or environment variables)"
+            python tools/upload_wheel_to_fabric.py \
+              --file "$WHEEL_FILE" \
+              --workspace-id "$FABRIC_WORKSPACE_ID" \
+              --environment-id "$FABRIC_ENVIRONMENT_ID"
+          fi
+
+      - name: Notify Fabric (blob) (optional)
+        if: ${{ secrets.FABRIC_NOTIFY_ENDPOINT != '' && secrets.AZURE_STORAGE_CONNECTION_STRING != '' }}
+        env:
+          FABRIC_NOTIFY_ENDPOINT: ${{ secrets.FABRIC_NOTIFY_ENDPOINT }}
+          FABRIC_NOTIFY_TOKEN: ${{ secrets.FABRIC_NOTIFY_TOKEN }}
+        run: |
+          echo "Notify Fabric endpoint about new wheel in blob storage (implement endpoint to accept blob URL)"
+          # If the upload action provided a URL output, you can use it here. Otherwise adapt to your storage layout.
+          # This placeholder assumes your Fabric-side endpoint can discover the blob URL or you pass it explicitly.
+          exit 0

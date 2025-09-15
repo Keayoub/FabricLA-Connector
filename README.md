@@ -1,609 +1,172 @@
-# FabricLA-Connector: Microsoft Fabric Log Analytics Framework
+# FabricLA-Connector: Microsoft Fabric to Azure Log Analytics Framework
 
-A comprehensive **Python framework and monitoring solution** that collects data from Microsoft Fabric REST APIs and sends it to Azure Log Analytics for analysis, alerting, and dashboarding.
+A comprehensive **Python framework** that collects operational data from Microsoft Fabric REST APIs and ingests it into **Azure Log Analytics** for monitoring, analysis, and alerting.
 
-**🚀 Complete Solution**: Infrastructure deployment + Python framework + Data collection notebooks + Environment setup
+## 🚀 Quick Start
 
-## ✨ **New in v1.0.0 - Framework Integration**
-- **🔧 Python Package**: Installable framework (`pip install -e .`) with modular components
-- **📦 High-Level Workflows**: One-line functions for common monitoring scenarios  
-- **🛡️ Enhanced Error Handling**: Comprehensive retry logic, rate limiting, and troubleshooting
-- **📊 Size-Aware Batching**: Automatic chunking to prevent "Payload Too Large" errors
-- **🔐 Fabric-Aware Authentication**: Auto-detection of Fabric runtime with workspace identity
-- **📋 Framework Integration**: All notebooks now use the consolidated framework
-- **🚀 Quick Start Examples**: `framework_quickstart_example.ipynb` for easy onboarding
-
-## 📊 Monitoring Capabilities
-
-This solution provides end-to-end monitoring for:
-
-- **Pipeline & Dataflow Executions**: Success/failure rates, performance metrics, activity runs
-- **Dataset Refresh Operations**: Refresh status, duration, error tracking, metadata
-- **User Activity Tracking**: Access patterns, usage analytics, security monitoring  
-- **Capacity Utilization**: Resource consumption, workload distribution, throttling events
-
-## 🔧 **Framework Components** (`/src/fabricla_connector/`)
-
-### **Core Framework Modules**
-
-| Module | Purpose | Key Classes/Functions |
-|--------|---------|----------------------|
-| `workflows.py` | **High-level workflows** | `collect_and_ingest_pipeline_data()`, `run_full_monitoring_cycle()` |
-| `collectors.py` | **Data collection** | `PipelineCollector`, `DatasetCollector`, `UserActivityCollector`, `CapacityCollector` |
-| `ingestion.py` | **Enhanced ingestion** | `FabricIngestion`, `post_rows_to_dcr_enhanced()`, size-aware batching |
-| `api.py` | **Fabric API client** | `FabricAPIClient`, authentication, rate limiting |
-| `config.py` | **Configuration management** | Environment variables, Key Vault integration, validation |
-| `utils.py` | **Utility functions** | Date handling, chunking, troubleshooting reports |
-
-### **Framework Installation**
-
+### **Install & Test Locally**
 ```bash
-# Install as editable package (recommended for development)
+# Clone and install
+git clone https://github.com/Keayoub/FabricLA-Connector.git
+cd FabricLA-Connector
 pip install -e .
 
-# Or install from source
-pip install .
+# Test build and upload to Fabric
+python test_local_build.py --workspace-id YOUR_WORKSPACE_ID --environment-id YOUR_ENV_ID
 ```
 
-### **Quick Start with Framework**
+### **Authentication Setup**
+```bash
+# Simplest: Azure CLI login
+az login
 
+# Or set environment variables for service principal
+export FABRIC_APP_ID="your-app-id"
+export FABRIC_APP_SECRET="your-app-secret"  
+export FABRIC_TENANT_ID="your-tenant-id"
+```
+
+## 📊 What This Framework Monitors
+
+| **Data Source** | **Information Collected** | **Custom Table** |
+|-----------------|---------------------------|------------------|
+| **Pipelines & Dataflows** | Execution status, performance metrics, errors | `FabricPipelineRun_CL`, `FabricDataflowRun_CL` |
+| **Dataset Refresh** | Refresh operations, duration, failure analysis | `FabricDatasetRefresh_CL`, `FabricDatasetMetadata_CL` |
+| **User Activity** | Access patterns, security events, usage analytics | `FabricUserActivity_CL` |
+| **Capacity Metrics** | Resource utilization, workload distribution | `FabricCapacityMetrics_CL`, `FabricCapacityWorkloads_CL` |
+
+## 🔧 Framework Components
+
+### **Core Python Package** (`/src/fabricla_connector/`)
 ```python
-# Simple workflow - one line data collection
+# High-level workflows (one-line data collection)
 from fabricla_connector.workflows import collect_and_ingest_pipeline_data_enhanced
 
 result = collect_and_ingest_pipeline_data_enhanced(
     workspace_id="your-workspace-id",
-    lookback_minutes=1440,  # 24 hours
-    troubleshoot=True
+    lookback_minutes=1440  # 24 hours
 )
 
-# Advanced usage with individual components
+# Individual components for custom workflows
 from fabricla_connector.api import FabricAPIClient
 from fabricla_connector.collectors import PipelineCollector
 from fabricla_connector.ingestion import FabricIngestion
-
-fabric_client = FabricAPIClient()
-collector = PipelineCollector(fabric_client)
-ingestion = FabricIngestion(
-    endpoint_host="https://your-dce.monitor.azure.com",
-    dcr_id="your-dcr-id",
-    stream_name="Custom-FabricPipelineRun_CL"
-)
-
-data = collector.collect_pipeline_runs(workspace_id, lookback_minutes=1440)
-result = ingestion.ingest_enhanced(records=data, troubleshoot=True)
 ```
 
-## 📁 Solution Components
+### **Data Collection Notebooks** (`/notebooks/`)
+- `framework_quickstart_example.ipynb` - Getting started guide
+- `fabric_pipeline_dataflow_collector.ipynb` - Pipeline monitoring
+- `fabric_dataset_refresh_monitoring.ipynb` - Dataset refresh tracking
+- `fabric_user_activity_monitoring.ipynb` - User activity analytics
+- `fabric_capacity_utilization_monitoring.ipynb` - Capacity monitoring
 
-### 🔧 **Data Collection Notebooks** (`/notebooks/`) - **Framework Integrated**
+### **Infrastructure Deployment** (`/infra/`)
+- **Bicep**: `bicep/main.bicep` - Log Analytics workspace + DCR + custom tables
+- **Terraform**: `terraform/main.tf` - Complete infrastructure deployment
 
-| Notebook | Purpose | Framework Integration |
-|----------|---------|----------------------|
-| `framework_quickstart_example.ipynb` | **Getting Started Guide** | ✅ Complete framework demo with examples |
-| `fabric_pipeline_dataflow_collector.ipynb` | **Pipeline & Dataflow Monitoring** | ✅ `PipelineCollector` + `DataflowCollector` + enhanced ingestion |
-| `fabric_dataset_refresh_monitoring.ipynb` | **Dataset Refresh Operations** | ✅ `DatasetCollector` + refresh analytics + troubleshooting |
-| `fabric_user_activity_monitoring.ipynb` | **User Activity Tracking** | ✅ `UserActivityCollector` + privacy compliance + engagement analytics |
-| `fabric_capacity_utilization_monitoring.ipynb` | **Capacity & Workload Monitoring** | ✅ `CapacityCollector` + optimization guidance + cost analysis |
+### **Development Tools** (`/tools/`)
+- Local testing and package upload utilities
+- See [tools/README.md](tools/README.md) for detailed documentation
 
-**✨ All notebooks now use the consolidated framework with:**
-- 🔧 **One-line workflows** for quick data collection
-- 🛡️ **Enhanced error handling** with specific guidance for 401/403/429 errors
-- 📊 **Size-aware batching** to prevent "Payload Too Large" errors
-- 🔄 **Automatic retry logic** with exponential backoff
-- 📋 **Comprehensive troubleshooting** with actionable recommendations
-- 🚀 **Framework consistency** - no more duplicate code between notebooks
+## 📋 Complete Setup Guide
 
-### 🏗️ **Infrastructure Deployment**
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| `/bicep/main.bicep` | **Bicep** | Log Analytics workspace, DCR, custom tables |
-| `/terraform/main.tf` | **Terraform** | Complete infrastructure with Azure provider |
-| `/bicep/tables-module.bicep` | **Bicep Module** | Custom Log Analytics table definitions |
+### **1. Deploy Infrastructure**
 
-### ⚙️ **Environment Setup**
-| File | Purpose |
-|------|---------|
-| `setup_fabric_environment.bat` | Python environment setup with runtime selection |
-| `requirements-fabric-1.2.txt` / `requirements-fabric-1.3.txt` | Package dependencies for different Fabric runtimes |
-| `validate_environment.ipynb` | Environment validation and connectivity testing |
-| `.env.example` | Environment variables template |
-
-### 📋 **Custom Log Analytics Tables**
-The solution creates these custom tables in Log Analytics:
-- `FabricPipelineRun_CL` - Pipeline execution data
-- `FabricPipelineActivityRun_CL` - Detailed activity run information  
-- `FabricDataflowRun_CL` - Dataflow execution data
-- `FabricDatasetRefresh_CL` - Dataset refresh operations
-- `FabricDatasetMetadata_CL` - Dataset configuration and metadata
-- `FabricUserActivity_CL` - User activity and access logs
-- `FabricCapacityMetrics_CL` - Capacity utilization metrics
-- `FabricCapacityWorkloads_CL` - Workload distribution data
-
-## 🚀 Quick Start
-
-### 1. **Install Framework** ⚡ **NEW**
-
+**Option A: Bicep**
 ```bash
-# Clone repository
-git clone https://github.com/Keayoub/FabricLA-Connector.git
-cd FabricLA-Connector
-
-# Install framework as editable package
-pip install -e .
-
-# Or install dependencies
-pip install -r requirements.txt
-```
-
-### 2. **Deploy Infrastructure**
-
-**Option A: Using Bicep**
-```bash
-# Deploy Log Analytics workspace and DCR
 az deployment group create \
-  --resource-group <your-rg> \
+  --resource-group your-rg \
   --template-file bicep/main.bicep \
   --parameters @bicep/params.json
 ```
 
-**Option B: Using Terraform**
+**Option B: Terraform**  
 ```bash
-# Initialize and deploy
 cd terraform/
 terraform init
-terraform plan -var-file="terraform.tfvars"
-terraform apply
+terraform apply -var-file="terraform.tfvars"
 ```
 
-### 2. **Set Up Environment**
-
-**For Local Development:**
+### **2. Configure Environment**
 ```bash
-# Set up Python environment
-setup_fabric_environment.bat
-
-# Configure credentials
-copy .env.example .env
-# Edit .env with your values
-
-# Validate setup
-# Run validate_environment.ipynb
-```
-
-**For Microsoft Fabric:**
-1. Upload notebooks to your Fabric workspace
-2. Configure authentication (environment variables or Key Vault)
-3. Mark parameter cells for dynamic execution
-
-### 3. **Configure Authentication**
-
-Set these environment variables in your `.env` file:
-```bash
-# Required
+# Required environment variables
 FABRIC_TENANT_ID=your-tenant-id
-FABRIC_APP_ID=your-service-principal-id  
+FABRIC_APP_ID=your-service-principal-id
 FABRIC_APP_SECRET=your-service-principal-secret
-FABRIC_WORKSPACE_ID=your-fabric-workspace-id
 
-# Log Analytics & DCR (from infrastructure deployment)
-DCR_ENDPOINT_HOST=your-dcr-endpoint.monitor.azure.com
-DCR_IMMUTABLE_ID=dcr-xxxxxxxxxxxxxxxxxxxxxxxx
-
-# Optional: Key Vault (recommended for production)
-AZURE_KEY_VAULT_URI=https://your-keyvault.vault.azure.net/
-AZURE_KEY_VAULT_SECRET_NAME=FabricServicePrincipal
+# Azure Monitor configuration (from infrastructure deployment)
+DCR_ENDPOINT_HOST=your-dce.monitor.azure.com
+DCR_IMMUTABLE_ID=dcr-xxxxxxxxxxxxxxxx
 ```
 
-### 4. **Run Monitoring**
+### **3. Start Monitoring**
 
-**✨ NEW: Choose your preferred approach**
-
-**Option A: Framework Workflows (Recommended)**
+**Framework Approach (Recommended):**
 ```python
-# Simple one-line data collection
-from fabricla_connector.workflows import collect_and_ingest_pipeline_data_enhanced
-
-result = collect_and_ingest_pipeline_data_enhanced(
-    workspace_id="your-workspace-id",
-    lookback_minutes=1440,  # 24 hours
-    troubleshoot=True
-)
-
-# Full monitoring cycle
 from fabricla_connector.workflows import run_full_monitoring_cycle
 
-full_result = run_full_monitoring_cycle(
+# Complete monitoring for all data sources
+result = run_full_monitoring_cycle(
     workspace_id="your-workspace-id",
     capacity_id="your-capacity-id"
 )
 ```
 
-**Option B: Individual Notebooks**
-Execute the notebooks based on your monitoring needs:
+**Notebook Approach:**
+- Upload notebooks to your Fabric workspace
+- Configure authentication
+- Execute based on your monitoring needs
 
-- **Start with**: `framework_quickstart_example.ipynb` (learn the framework)
-- **For comprehensive monitoring**: `fabric_pipeline_dataflow_collector.ipynb`
-- **For dataset monitoring**: `fabric_dataset_refresh_monitoring.ipynb`
-- **For user analytics**: `fabric_user_activity_monitoring.ipynb`  
-- **For capacity monitoring**: `fabric_capacity_utilization_monitoring.ipynb`
+## 🧪 Local Development
 
-## 🔐 Authentication Methods
+### **Build & Test Package**
+```bash
+# Test build only
+python test_local_build.py --workspace-id YOUR_ID --environment-id YOUR_ID --skip-upload
 
-The solution supports multiple authentication approaches:
+# Build and upload to Fabric (staging)
+python test_local_build.py --workspace-id YOUR_ID --environment-id YOUR_ID
 
-### **1. Environment Variables** *(Simple - Local Development)*
-```python
-use_key_vault = False
-# Uses FABRIC_APP_SECRET from environment
+# Build, upload, and auto-publish (immediate activation)
+python test_local_build.py --workspace-id YOUR_ID --environment-id YOUR_ID --publish
 ```
 
-### **2. Azure Key Vault + Managed Identity** *(Recommended - Production)*
-```python
-use_key_vault = True
-use_managed_identity = True
-# Perfect for Azure VMs, Container Apps, Function Apps
+See [tools/README.md](tools/README.md) for comprehensive testing and upload options.
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
+│ Microsoft       │    │ FabricLA         │    │ Azure Log Analytics │
+│ Fabric          │────│ Connector        │────│ Workspace           │
+│ (REST APIs)     │    │ Framework        │    │ (Custom Tables)     │
+└─────────────────┘    └──────────────────┘    └─────────────────────┘
+                              │
+                    ┌─────────┼─────────┐
+                    │         │         │
+              ┌──────▼──┐ ┌────▼───┐ ┌───▼────┐
+              │ Fabric  │ │ Local  │ │ CI/CD  │
+              │Notebooks│ │ Python │ │Pipeline│
+              └─────────┘ └────────┘ └────────┘
 ```
 
-### **3. Azure Key Vault + Service Principal** *(Hybrid)*
-```python
-use_key_vault = True
-use_managed_identity = False
-# Uses Key Vault but authenticates with service principal
-```
+## 📚 Documentation
 
-### **4. Fabric Workspace Identity** *(Fabric Runtime)*
-- Automatically detected when running in Fabric
-- Uses built-in `notebookutils.credentials` when available
+- **[Local Testing Guide](tools/README.md)** - Development and upload tools
+- **[Deployment Options](DEPLOYMENT_OPTIONS_GUIDE.md)** - Staging vs auto-publish
+- **[Packaging Guide](PACKAGING_BEST_PRACTICES.md)** - Modern Python packaging
 
-## 📊 Sample KQL Queries
+## 🤝 Contributing
 
-Once data is flowing, use these queries in Log Analytics:
+1. Clone the repository
+2. Install in development mode: `pip install -e .`
+3. Make changes and test locally
+4. Use the local testing tools to validate
 
-**Pipeline Success Rate:**
-```kql
-FabricPipelineRun_CL
-| where TimeGenerated > ago(7d)
-| summarize 
-    Total = count(),
-    Successful = countif(Status == "Succeeded"),
-    Failed = countif(Status == "Failed")
-| extend SuccessRate = round(100.0 * Successful / Total, 2)
-```
+## 📄 License
 
-**Dataset Refresh Performance:**
-```kql
-FabricDatasetRefresh_CL
-| where TimeGenerated > ago(24h) and isnotnull(DurationMs)
-| summarize 
-    AvgDuration = avg(DurationMs/1000),
-    P95Duration = percentile(DurationMs/1000, 95)
-    by DatasetName
-| order by AvgDuration desc
-```
-
-**User Activity Trends:**
-```kql
-FabricUserActivity_CL
-| where TimeGenerated > ago(30d)
-| summarize ActivityCount = count() by 
-    UserId, 
-    bin(TimeGenerated, 1d)
-| render timechart
-```
-
-## � Framework Benefits & Features ⚡ **NEW in v1.0.0**
-
-### **✨ Enhanced Reliability**
-- **🛡️ Smart Error Handling**: Specific guidance for HTTP 401, 403, 404, 429 errors with actionable recommendations
-- **🔄 Automatic Retry Logic**: Exponential backoff for transient failures (429 rate limits, network issues)
-- **📊 Size-Aware Batching**: Prevents "Payload Too Large" errors by automatically chunking large datasets (950KB JSON limit)
-- **⚡ Connection Pooling**: Efficient API calls with connection reuse and timeout management
-
-### **🔧 Developer Experience**
-- **📦 Installable Package**: `pip install -e .` for easy framework installation and updates
-- **🚀 One-Line Workflows**: `collect_and_ingest_pipeline_data_enhanced()` for quick data collection
-- **🧪 Modular Components**: Mix and match collectors, ingestion, and authentication for custom scenarios
-- **📋 Comprehensive Troubleshooting**: Detailed reports with configuration validation and actionable recommendations
-
-### **🔐 Enhanced Authentication**
-- **🏢 Fabric-Aware**: Auto-detection of Fabric runtime with workspace identity (`notebookutils.credentials`)
-- **🔑 Managed Identity**: Seamless authentication in Azure environments (VMs, Container Apps, Functions)
-- **🔒 Key Vault Integration**: Secure credential storage with automatic retrieval
-- **⚙️ Environment Detection**: Smart switching between local development and production configurations
-
-### **📊 Advanced Monitoring**
-- **📈 Progress Tracking**: Real-time progress indicators for large data collections
-- **🕒 Execution Timing**: Performance metrics for all operations
-- **📋 Troubleshooting Reports**: Automatic generation of diagnostic information
-- **🔍 Data Validation**: Schema validation and data quality checks before ingestion
-
-## �🔧 Configuration Options
-
-### **Lookback Windows**
-- **Pipeline/Dataflow**: 1200 minutes (20 hours) for regular monitoring
-- **Dataset Refresh**: 24 hours for recent operations
-- **User Activity**: 24 hours for recent access patterns
-- **Capacity**: 24 hours with 15-minute intervals
-
-### **Data Collection Modes**
-- **Incremental**: Short lookback for regular scheduled runs
-- **Bulk**: Large lookback for historical data collection
-- **Activity Runs**: Detailed activity monitoring (can be disabled for large volumes)
-
-### **Auto-Discovery**
-All notebooks support auto-discovery:
-- **Workspaces**: Leave `workspace_ids = []` to monitor all accessible workspaces
-- **Datasets**: Leave `dataset_ids = []` to monitor all datasets
-- **Capacities**: Leave `capacity_ids = []` to monitor all accessible capacities
-
-## 📋 Prerequisites
-
-### **Service Principal Permissions**
-- **Fabric API**: `Fabric.ReadAll` application permission
-- **Azure Monitor**: `Monitoring Metrics Publisher` role on DCR
-- **Key Vault** *(if used)*: `Key Vault Secrets User` role
-
-### **Required Azure Resources**
-- Azure Log Analytics workspace
-- Data Collection Rule (DCR) with custom streams
-- Data Collection Endpoint (DCE)
-- Service Principal with appropriate permissions
-
-### **Fabric Requirements**
-- Microsoft Fabric workspace with appropriate access
-- Pipelines, dataflows, or datasets to monitor
-- Fabric capacity (for capacity monitoring)
-
-## 🚨 Troubleshooting
-
-### **Empty Log Analytics Tables**
-1. **Wait 10-15 minutes** - ingestion delay is normal
-2. **Check DCR configuration** - ensure streams match notebook configuration
-3. **Verify permissions** - service principal needs DCR write access
-4. **Check data collection summary** - notebooks show ingestion results
-
-### **Authentication Errors**
-1. **Verify service principal permissions** in Azure AD
-2. **Check tenant ID and client ID** in environment variables
-3. **Test Key Vault access** if using Key Vault authentication
-4. **Ensure admin consent** granted for Fabric API permissions
-
-### **API Rate Limits**
-1. **Reduce lookback window** for bulk collections
-2. **Disable activity runs** for pipeline monitoring during bulk loads
-3. **Spread execution times** across different notebooks
-4. **Monitor API response times** and adjust accordingly
-
-## 🔄 Regular Maintenance
-
-### **Scheduled Execution**
-- Set up **Fabric pipelines** or **Azure Logic Apps** for regular execution
-- **Recommended frequency**: Every 2-4 hours for incremental monitoring
-- **Bulk updates**: Weekly or monthly for historical analysis
-
-### **Monitoring Health**
-- Set up **Log Analytics alerts** for failed ingestions
-- Monitor **DCR ingestion quotas** and costs
-- Track **API rate limit usage** across all notebooks
-
-### **Performance Optimization**
-- Adjust **lookback windows** based on data volume
-- Use **dataset/workspace filtering** for targeted monitoring
-- Consider **parallel execution** for large environments
+MIT License - See LICENSE file for details
 
 ---
 
-**📅 Last Updated**: September 2025  
-**🔧 Version**: v1.0.0 - **Framework Integration with Enhanced Features**  
-**🚀 Major Updates**: 
-- ✅ **Complete framework consolidation** with installable Python package
-- ✅ **All notebooks migrated** to use framework with one-line workflows  
-- ✅ **Enhanced error handling** with smart retry logic and size-aware batching
-- ✅ **Fabric-aware authentication** with auto-detection and managed identity support
-- ✅ **Comprehensive troubleshooting** with actionable recommendations and validation
-- ✅ **Modular architecture** for custom monitoring scenarios
-
-**📚 Documentation**: See individual notebook README files for detailed configuration  
-**🆕 Getting Started**: Start with `framework_quickstart_example.ipynb` to learn the framework
-
-**💡 Need Help?** Check the troubleshooting sections in individual notebooks or create an issue in the repository.
-
----
-
-## 🔄 Migration from Previous Versions
-
-If you're upgrading from previous versions:
-
-1. **Install the framework**: `pip install -e .`
-2. **Update notebooks**: All notebooks now use framework imports
-3. **Review configuration**: Environment variables remain the same
-4. **Test workflows**: Use `framework_quickstart_example.ipynb` to verify setup
-5. **Migrate custom code**: Use the new modular collectors and workflows for custom scenarios
-
-The framework maintains backward compatibility while providing enhanced features and reliability.
-
-Choose your authentication method based on your deployment environment:
-
-### Option 1: Environment Variables (Recommended for Local Development)
-
-Create a `.env` file in your workspace root with:
-
-```env
-FABRIC_TENANT_ID=your-tenant-id
-FABRIC_APP_ID=your-app-id  
-FABRIC_APP_SECRET=your-app-secret
-DCR_ENDPOINT_HOST=your-dce-endpoint.region.ingest.monitor.azure.com
-DCR_IMMUTABLE_ID=your-dcr-immutable-id
-FABRIC_WORKSPACE_ID=your-workspace-id
-```
-
-### Option 2: Key Vault with Managed Identity (Recommended for Production)
-
-Best for Azure VMs, Container Apps, Function Apps, and Fabric workspaces:
-
-```python
-# Configure in notebook parameters cell
-use_key_vault = True
-use_managed_identity = True  # No client secret needed!
-```
-
-Store secrets in Key Vault with these names:
-- `TenantId`: Azure tenant ID
-- `ClientId`: Service principal client ID
-- `ClientSecret`: Service principal client secret
-- `DCREndpointHost`: DCR endpoint host
-- `DCRImmutableId`: DCR immutable ID
-
-### Option 3: Key Vault with Client Secret
-
-For environments where managed identity is not available:
-
-```python
-# Configure in notebook parameters cell
-use_key_vault = True
-use_managed_identity = False
-key_vault_uri = "https://your-keyvault.vault.azure.net/"
-```
-
-**Note**: This approach has a circular dependency where the service principal needs a secret to authenticate to Key Vault to retrieve the same secret.
-
-### Option 4: Direct Configuration (Not Recommended for Production)
-
-Set credentials directly in the parameters cell:
-
-```python
-# Configure in notebook parameters cell
-tenant_id = "your-tenant-id"
-client_id = "your-app-id"
-client_secret_env = "your-app-secret"
-```
-
-**Security Risk**: Credentials are visible in the notebook and version control.
-
-## Required Permissions
-
-### Service Principal Permissions
-- **Fabric API**: `Fabric.ReadAll` application permission
-- **Azure Monitor**: `Monitoring Metrics Publisher` role on the DCR
-- **Key Vault**: `Key Vault Secrets User` role on the Key Vault scope (if using Key Vault)
-
-### Azure Role Assignments
-- Assign the service principal the `Monitoring Metrics Publisher` role on the Data Collection Rule
-- For Key Vault access, assign `Key Vault Secrets User` role on the Key Vault resource
-
-## Configuration Parameters
-
-### Workspace and Item Configuration
-- **workspace_id**: Target Fabric workspace ID (auto-detected in Fabric)
-- **pipeline_item_ids**: List of specific pipeline IDs to monitor (empty list monitors all)
-- **dataflow_item_ids**: List of specific dataflow IDs to monitor (empty list monitors all)
-
-### Collection Modes
-
-#### Bulk Ingestion Mode (Historical Data)
-```python
-lookback_minutes = 43200  # 30 days
-collect_activity_runs = False  # Disabled to avoid API limits
-```
-
-#### Incremental Collection Mode (Regular Monitoring)
-```python
-lookback_minutes = 1200  # 20 hours
-collect_activity_runs = True  # Enabled for detailed insights
-```
-
-#### Activity Runs Backfill Mode
-```python
-lookback_minutes = 10080  # 7 days
-collect_activity_runs = True  # Enabled for detailed data
-```
-
-### Data Collection Endpoint Configuration
-- **dcr_endpoint_host**: Your Data Collection Endpoint hostname
-- **dcr_immutable_id**: Your Data Collection Rule immutable ID
-- **stream_pipeline**: Custom stream name for pipeline data
-- **stream_activity**: Custom stream name for activity data
-- **stream_dataflow**: Custom stream name for dataflow data
-
-## Log Analytics Tables
-
-This notebook creates and populates the following Log Analytics tables:
-
-| Table Name | Description | Key Fields |
-|------------|-------------|------------|
-| `FabricPipelineRun_CL` | Pipeline execution logs | Status, Duration, ItemName, WorkspaceName |
-| `FabricDataflowRun_CL` | Dataflow execution logs | Status, Duration, ItemName, WorkspaceName |
-| `FabricPipelineActivityRun_CL` | Activity-level execution details | ActivityType, Status, Duration, ErrorDetails |
-
-## Troubleshooting
-
-### Common Issues
-
-#### Authentication Failures
-- Verify service principal credentials and permissions
-- Check that the service principal has the required API permissions
-- Ensure proper role assignments on Azure resources
-
-#### Data Collection Issues
-- Verify DCR endpoint and immutable ID are correct
-- Check that the service principal has `Monitoring Metrics Publisher` role on the DCR
-- Validate network connectivity to Azure Monitor endpoints
-
-#### Environment Issues
-- Run `validate_environment.ipynb` to check configuration
-- Verify all required environment variables are set
-- Check Python package dependencies are installed
-
-### Performance Considerations
-- Use appropriate lookback windows to balance completeness and performance
-- Monitor API rate limits when collecting large datasets
-- Consider running during off-peak hours for large historical collections
-
-### Security Best Practices
-- Use managed identity in production environments
-- Store secrets in Azure Key Vault
-- Apply principle of least privilege for service principal permissions
-- Regular rotation of authentication credentials
-
-## Sample KQL Queries
-
-### Pipeline Success Rate
-```kql
-FabricPipelineRun_CL
-| where TimeGenerated >= ago(24h)
-| summarize 
-    Total = count(),
-    Success = countif(Status == "Completed"),
-    Failed = countif(Status == "Failed")
-| extend SuccessRate = (Success * 100.0) / Total
-```
-
-### Pipeline Performance Analysis
-```kql
-FabricPipelineRun_CL
-| where TimeGenerated >= ago(7d)
-| where Status == "Succeeded"
-| summarize AvgDuration = avg(DurationMs) by ItemId
-| order by AvgDuration desc
-```
-
-### Failed Pipeline Analysis
-```kql
-FabricPipelineRun_CL
-| where TimeGenerated >= ago(24h)
-| where Status == "Failed"
-| project TimeGenerated, ItemId, WorkspaceId, ErrorMessage
-| order by TimeGenerated desc
-```
-
-## Integration with Other Tools
-
-### Power BI Dashboard
-Create operational dashboards using the collected data in Log Analytics as a data source.
-
-### Azure Alerts
-Set up automated alerts based on pipeline failures or performance degradation.
-
-### Fabric Data Activator
-Use collected data to trigger automated responses to operational events.
+**🚀 Ready to monitor your Microsoft Fabric environment?** Start with the Quick Start guide above!
