@@ -1,0 +1,311 @@
+name: Build and Deploy to Fabric Environment
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      fabric_workspace_id:
+        description: 'Fabric Workspace ID to upload to'
+        required: false
+        type: string
+      upload_to_fabric:
+        description: 'Upload wheel to Fabric environment'
+        required: false
+        default: true
+        type: boolean
+      auto_publish:
+        description: 'Auto-publish after upload (immediate activation)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+  PACKAGE_NAME: 'fabricla-connector'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Python Wheel
+    runs-on: ubuntu-latest
+    
+    outputs:
+      wheel-name: ${{ steps.build.outputs.wheel-name }}
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build wheel setuptools twine
+
+    - name: Extract version
+      id: version
+      run: |
+        # Try pyproject.toml first, fallback to setup.py
+        if [ -f "pyproject.toml" ]; then
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])" 2>/dev/null || echo "0.1.0")
+        else
+          VERSION=$(python setup.py --version 2>/dev/null || echo "0.1.0")
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Package version: $VERSION"
+
+    - name: Build wheel
+      id: build
+      run: |
+        python -m build --wheel --no-isolation
+        WHEEL_NAME=$(ls dist/*.whl | head -n 1 | xargs basename)
+        echo "wheel-name=$WHEEL_NAME" >> $GITHUB_OUTPUT
+        echo "Built wheel: $WHEEL_NAME"
+        
+        # Verify wheel contents
+        echo "Wheel contents:"
+        python -m zipfile -l "dist/$WHEEL_NAME"
+
+    - name: Check wheel
+      run: |
+        python -m twine check dist/*.whl
+
+    - name: Upload wheel artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-wheel
+        path: dist/*.whl
+        retention-days: 30
+
+    - name: Upload wheel for Fabric deployment
+      if: github.event_name != 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: fabric-deployment-wheel
+        path: dist/*.whl
+        retention-days: 7
+
+  deploy-to-fabric:
+    name: Deploy to Fabric Environment
+    runs-on: ubuntu-latest
+    needs: build
+    if: |
+      github.event_name != 'pull_request' && 
+      (github.ref == 'refs/heads/main' || 
+       github.ref == 'refs/heads/develop' || 
+       startsWith(github.ref, 'refs/tags/v') ||
+       (github.event_name == 'workflow_dispatch' && inputs.upload_to_fabric == true))
+    
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Download wheel artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: fabric-deployment-wheel
+        path: dist/
+
+    - name: Install Fabric SDK dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests azure-identity azure-core
+
+    - name: Deploy to Fabric Environment
+      env:
+        FABRIC_TENANT_ID: ${{ secrets.FABRIC_TENANT_ID }}
+        FABRIC_CLIENT_ID: ${{ secrets.FABRIC_CLIENT_ID }}
+        FABRIC_CLIENT_SECRET: ${{ secrets.FABRIC_CLIENT_SECRET }}
+        FABRIC_WORKSPACE_ID: ${{ inputs.fabric_workspace_id || secrets.FABRIC_WORKSPACE_ID }}
+        FABRIC_ENVIRONMENT_ID: ${{ secrets.FABRIC_ENVIRONMENT_ID }}
+        FABRIC_TOKEN: ${{ secrets.FABRIC_TOKEN }}
+      run: |
+        set -e
+        
+        # Validate required Fabric configuration
+        if [ -z "$FABRIC_WORKSPACE_ID" ] || [ -z "$FABRIC_ENVIRONMENT_ID" ]; then
+          echo "❌ Error: FABRIC_WORKSPACE_ID and FABRIC_ENVIRONMENT_ID are required"
+          echo "Please configure these secrets in your repository settings"
+          exit 1
+        fi
+        
+        WHEEL_FILE=$(ls dist/*.whl | head -n1)
+        echo "🚀 Deploying $WHEEL_FILE to Fabric Environment"
+        echo "📋 Workspace: $FABRIC_WORKSPACE_ID"
+        echo "📋 Environment: $FABRIC_ENVIRONMENT_ID"
+        
+        # Determine deployment strategy
+        PUBLISH_FLAG=""
+        if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ inputs.auto_publish }}" = "true" ] || [ -n "${{ startsWith(github.ref, 'refs/tags/v') }}" ]; then
+          PUBLISH_FLAG="--publish"
+          echo "🎯 Auto-publish enabled (immediate activation)"
+        else
+          echo "📋 Staging deployment (manual publish required)"
+        fi
+        
+        # Use the consolidated upload script from tools/ folder
+        # Try different authentication methods
+        if [ -n "$FABRIC_TOKEN" ]; then
+          echo "🔐 Using provided bearer token"
+          python tools/upload_wheel_to_fabric.py \
+            --file "$WHEEL_FILE" \
+            --workspace-id "$FABRIC_WORKSPACE_ID" \
+            --environment-id "$FABRIC_ENVIRONMENT_ID" \
+            --token "$FABRIC_TOKEN" \
+            $PUBLISH_FLAG
+        elif [ -n "$FABRIC_CLIENT_ID" ] && [ -n "$FABRIC_CLIENT_SECRET" ] && [ -n "$FABRIC_TENANT_ID" ]; then
+          echo "🔐 Using client credentials authentication"
+          python tools/upload_wheel_to_fabric.py \
+            --file "$WHEEL_FILE" \
+            --workspace-id "$FABRIC_WORKSPACE_ID" \
+            --environment-id "$FABRIC_ENVIRONMENT_ID" \
+            --client-id "$FABRIC_CLIENT_ID" \
+            --client-secret "$FABRIC_CLIENT_SECRET" \
+            --tenant-id "$FABRIC_TENANT_ID" \
+            $PUBLISH_FLAG
+        else
+          echo "🔐 Using DefaultAzureCredential (GitHub OIDC or environment variables)"
+          python tools/upload_wheel_to_fabric.py \
+            --file "$WHEEL_FILE" \
+            --workspace-id "$FABRIC_WORKSPACE_ID" \
+            --environment-id "$FABRIC_ENVIRONMENT_ID" \
+            $PUBLISH_FLAG
+        fi
+        
+        echo "✅ Fabric deployment completed successfully!"
+
+    - name: Upload to Azure Blob Storage (optional backup)
+      if: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING != '' }}
+      run: |
+        echo "📦 Uploading wheel to Azure Blob Storage as backup"
+        WHEEL_FILE=$(ls dist/*.whl | head -n1)
+        
+        # Install Azure CLI if needed
+        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        
+        # Upload using Azure CLI
+        az storage blob upload \
+          --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+          --container-name "${{ secrets.AZURE_STORAGE_CONTAINER || 'wheels' }}" \
+          --file "$WHEEL_FILE" \
+          --name "$(basename $WHEEL_FILE)" \
+          --overwrite
+
+    - name: Create deployment summary
+      env:
+        FABRIC_WORKSPACE_ID: ${{ inputs.fabric_workspace_id || secrets.FABRIC_WORKSPACE_ID }}
+        FABRIC_ENVIRONMENT_ID: ${{ secrets.FABRIC_ENVIRONMENT_ID }}
+      run: |
+        WHEEL_FILE=$(ls dist/*.whl | head -n1)
+        DEPLOYMENT_STATUS="Staged (Manual Publish Required)"
+        if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ inputs.auto_publish }}" = "true" ] || [ -n "${{ startsWith(github.ref, 'refs/tags/v') }}" ]; then
+          DEPLOYMENT_STATUS="Published and Active"
+        fi
+        
+        echo "## 🚀 Fabric Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Package**: ${{ env.PACKAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ needs.build.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Wheel**: $WHEEL_FILE" >> $GITHUB_STEP_SUMMARY
+        echo "- **Workspace ID**: $FABRIC_WORKSPACE_ID" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment ID**: $FABRIC_ENVIRONMENT_ID" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: $DEPLOYMENT_STATUS" >> $GITHUB_STEP_SUMMARY
+        echo "- **Deployed at**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Package Usage in Fabric" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "In your Fabric notebooks, you can now use:" >> $GITHUB_STEP_SUMMARY
+        echo '```python' >> $GITHUB_STEP_SUMMARY
+        echo "# Import the FabricLA-Connector framework" >> $GITHUB_STEP_SUMMARY
+        echo "from fabricla_connector.workflows import (" >> $GITHUB_STEP_SUMMARY
+        echo "    collect_and_ingest_pipeline_data_enhanced," >> $GITHUB_STEP_SUMMARY
+        echo "    run_full_monitoring_cycle" >> $GITHUB_STEP_SUMMARY
+        echo ")" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Start monitoring your Fabric environment" >> $GITHUB_STEP_SUMMARY
+        echo "result = run_full_monitoring_cycle(" >> $GITHUB_STEP_SUMMARY
+        echo "    workspace_id='your-workspace-id'," >> $GITHUB_STEP_SUMMARY
+        echo "    capacity_id='your-capacity-id'" >> $GITHUB_STEP_SUMMARY
+        echo ")" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build, deploy-to-fabric]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download wheel artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: python-wheel
+        path: dist/
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*.whl
+        generate_release_notes: true
+        body: |
+          ## FabricLA-Connector v${{ needs.build.outputs.version }}
+          
+          This release includes the FabricLA-Connector Python wheel package for Microsoft Fabric to Azure Log Analytics data ingestion.
+          
+          ### 📦 Installation
+          
+          Download the wheel file and install in your Fabric environment:
+          
+          ```bash
+          pip install fabricla_connector-${{ needs.build.outputs.version }}-py3-none-any.whl
+          ```
+          
+          ### 🚀 Quick Start
+          
+          ```python
+          from fabricla_connector.workflows import run_full_monitoring_cycle
+          
+          # Start comprehensive monitoring
+          result = run_full_monitoring_cycle(
+              workspace_id="your-workspace-id",
+              capacity_id="your-capacity-id"
+          )
+          ```
+          
+          ### 📚 Documentation
+          
+          - [Setup Guide](README.md)
+          - [Tools Documentation](tools/README.md)
+          - [Sample Notebooks](notebooks/)
+          - [Deployment Options](DEPLOYMENT_OPTIONS_GUIDE.md)

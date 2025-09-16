@@ -12,6 +12,12 @@
 *.userosscache
 *.sln.docstates
 
+# building python package
+build/
+dist/
+fabricla_connector.egg-info/
+
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -424,4 +430,10 @@ infra/terraform/.terraform/
 .github/instructions/
 
 fabricla_connector.egg-info/
+src/fabricla_connector.egg-info/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
 

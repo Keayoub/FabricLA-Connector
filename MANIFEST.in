@@ -1,0 +1,28 @@
+# Include the README and other documentation
+include README.md
+include *.md
+
+# Include requirements files
+include requirements*.txt
+include pyproject.toml
+
+# Include configuration files
+include .gitignore
+recursive-include infra *.bicep *.json *.tf *.md *.tfvars
+
+# Include source code
+recursive-include src *.py
+
+# Include notebooks
+recursive-include notebooks *.ipynb *.md
+
+# Exclude build artifacts and cache
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.orig
+global-exclude *.rej
+global-exclude __pycache__
+global-exclude .coverage
+global-exclude .pytest_cache
+recursive-exclude * __pycache__
+recursive-exclude *.egg-info *
