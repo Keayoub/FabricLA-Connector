@@ -56,6 +56,10 @@ from . import config
 from . import api
 from . import utils
 
+# Import intelligent monitoring modules
+from . import monitoring_detection
+from . import intelligent_workflows
+
 # Import key classes and functions for direct access
 from .collectors import (
     PipelineDataCollector,
@@ -70,6 +74,7 @@ from .config import (
     get_config,
     get_ingestion_config,
     get_fabric_config,
+    get_monitoring_config,
     validate_config,
     print_config_status,
     is_running_in_fabric
@@ -85,6 +90,22 @@ from .workflows import (
     run_full_monitoring_cycle_enhanced,
     collect_and_ingest_pipeline_data_enhanced,
     validate_and_test_configuration
+)
+
+# Import intelligent monitoring workflows
+from .intelligent_workflows import (
+    run_intelligent_monitoring_cycle,
+    check_workspace_monitoring_status,
+    get_collection_recommendations,
+    run_full_monitoring_cycle_intelligent,
+    run_complementary_monitoring_cycle,
+    run_minimal_monitoring_cycle
+)
+
+from .monitoring_detection import (
+    get_monitoring_detector,
+    get_monitoring_strategy,
+    print_monitoring_status
 )
 
 # Version information
@@ -122,6 +143,7 @@ __all__ = [
     "get_config",
     "get_ingestion_config",
     "get_fabric_config",
+    "get_monitoring_config",
     "validate_config",
     "print_config_status",
     "is_running_in_fabric",
@@ -134,6 +156,17 @@ __all__ = [
     "run_full_monitoring_cycle_enhanced",
     "collect_and_ingest_pipeline_data_enhanced",
     "validate_and_test_configuration",
+    
+    # Intelligent monitoring functions
+    "run_intelligent_monitoring_cycle",
+    "check_workspace_monitoring_status",
+    "get_collection_recommendations",
+    "run_full_monitoring_cycle_intelligent",
+    "run_complementary_monitoring_cycle", 
+    "run_minimal_monitoring_cycle",
+    "get_monitoring_detector",
+    "get_monitoring_strategy",
+    "print_monitoring_status",
     
     # Compatibility aliases
     "main_pipeline_workflow",

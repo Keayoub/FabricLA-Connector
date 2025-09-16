@@ -68,6 +68,11 @@ def get_config() -> Dict[str, Optional[str]]:
         'CHUNK_SIZE': os.getenv('CHUNK_SIZE', '1000'),
         'MAX_RETRIES': os.getenv('MAX_RETRIES', '3'),
         
+        # Monitoring strategy settings
+        'FABRIC_MONITORING_STRATEGY': os.getenv('FABRIC_MONITORING_STRATEGY', 'auto'),
+        'WORKSPACE_MONITORING_CHECK': os.getenv('WORKSPACE_MONITORING_CHECK', 'true'),
+        'FORCE_COLLECTION_OVERRIDE': os.getenv('FORCE_COLLECTION_OVERRIDE', 'false'),
+        
         # Environment info
         'ENVIRONMENT': 'fabric' if is_running_in_fabric() else 'local'
     }
@@ -126,6 +131,19 @@ def get_fabric_config() -> Dict[str, Any]:
         'capacity_id': config.get('FABRIC_CAPACITY_ID'),
         'lookback_hours': int(config.get('LOOKBACK_HOURS') or '24'),
         'environment': config.get('ENVIRONMENT')
+    }
+
+
+def get_monitoring_config() -> Dict[str, Any]:
+    """Get configuration specific to intelligent monitoring operations"""
+    config = get_config()
+    return {
+        'strategy': config.get('FABRIC_MONITORING_STRATEGY', 'auto'),
+        'workspace_monitoring_check': (config.get('WORKSPACE_MONITORING_CHECK', 'true') or 'true').lower() == 'true',
+        'force_collection_override': (config.get('FORCE_COLLECTION_OVERRIDE', 'false') or 'false').lower() == 'true',
+        'lookback_hours': int(config.get('LOOKBACK_HOURS') or '24'),
+        'chunk_size': int(config.get('CHUNK_SIZE') or '1000'),
+        'max_retries': int(config.get('MAX_RETRIES') or '3')
     }
 
 
