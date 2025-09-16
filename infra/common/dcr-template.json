@@ -54,8 +54,10 @@
               { "name": "StartTimeUtc", "type": "datetime" },
               { "name": "EndTimeUtc", "type": "datetime" },
               { "name": "DurationMs", "type": "long" },
-              { "name": "RowsRead", "type": "long" },
-              { "name": "RowsWritten", "type": "long" },
+              { "name": "DataRead", "type": "long" },
+              { "name": "DataWritten", "type": "long" },
+              { "name": "RecordsProcessed", "type": "long" },
+              { "name": "ExecutionStatistics", "type": "dynamic" },
               { "name": "ErrorCode", "type": "string" },
               { "name": "ErrorMessage", "type": "string" }
             ]
@@ -173,6 +175,195 @@
               { "name": "ItemDescription", "type": "string" },
               { "name": "IsOnDedicatedCapacity", "type": "boolean" }
             ]
+          },
+          "Custom-FabricOneLakeStorage_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "LakehouseId", "type": "string" },
+              { "name": "LakehouseName", "type": "string" },
+              { "name": "WarehouseId", "type": "string" },
+              { "name": "WarehouseName", "type": "string" },
+              { "name": "ItemType", "type": "string" },
+              { "name": "CreatedDate", "type": "datetime" },
+              { "name": "LastUpdated", "type": "datetime" },
+              { "name": "TableCount", "type": "int" },
+              { "name": "OneLakePath", "type": "string" },
+              { "name": "StorageUsageBytes", "type": "long" }
+            ]
+          },
+          "Custom-FabricSparkJobs_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "JobDefinitionId", "type": "string" },
+              { "name": "JobDefinitionName", "type": "string" },
+              { "name": "Description", "type": "string" },
+              { "name": "CreatedDate", "type": "datetime" },
+              { "name": "LastUpdated", "type": "datetime" },
+              { "name": "MainDefinitionFile", "type": "string" },
+              { "name": "DefaultLakehouseId", "type": "string" },
+              { "name": "DefaultLakehouseName", "type": "string" }
+            ]
+          },
+          "Custom-FabricSparkJobRuns_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "JobDefinitionId", "type": "string" },
+              { "name": "JobDefinitionName", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTimeUtc", "type": "datetime" },
+              { "name": "EndTimeUtc", "type": "datetime" },
+              { "name": "DurationSeconds", "type": "real" },
+              { "name": "SubmittedBy", "type": "string" },
+              { "name": "JobType", "type": "string" },
+              { "name": "FailureReason", "type": "string" }
+            ]
+          },
+          "Custom-FabricNotebooks_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "NotebookId", "type": "string" },
+              { "name": "NotebookName", "type": "string" },
+              { "name": "Description", "type": "string" },
+              { "name": "CreatedDate", "type": "datetime" },
+              { "name": "LastUpdated", "type": "datetime" },
+              { "name": "DefaultLakehouseId", "type": "string" },
+              { "name": "DefaultLakehouseName", "type": "string" }
+            ]
+          },
+          "Custom-FabricNotebookRuns_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "NotebookId", "type": "string" },
+              { "name": "NotebookName", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTimeUtc", "type": "datetime" },
+              { "name": "EndTimeUtc", "type": "datetime" },
+              { "name": "DurationSeconds", "type": "real" },
+              { "name": "SubmittedBy", "type": "string" },
+              { "name": "FailureReason", "type": "string" }
+            ]
+          },
+          "Custom-FabricGitIntegration_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "GitProviderType", "type": "string" },
+              { "name": "OrganizationName", "type": "string" },
+              { "name": "ProjectName", "type": "string" },
+              { "name": "GitRepositoryName", "type": "string" },
+              { "name": "BranchName", "type": "string" },
+              { "name": "DirectoryName", "type": "string" },
+              { "name": "LastCommitSha", "type": "string" },
+              { "name": "LastSyncTime", "type": "datetime" },
+              { "name": "ItemId", "type": "string" },
+              { "name": "ItemName", "type": "string" },
+              { "name": "ItemType", "type": "string" },
+              { "name": "ChangeType", "type": "string" },
+              { "name": "ConflictType", "type": "string" },
+              { "name": "StatusType", "type": "string" }
+            ]
+          },
+          "Custom-FabricPermissions_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "CapacityId", "type": "string" },
+              { "name": "ItemId", "type": "string" },
+              { "name": "ItemName", "type": "string" },
+              { "name": "ItemType", "type": "string" },
+              { "name": "PrincipalId", "type": "string" },
+              { "name": "PrincipalType", "type": "string" },
+              { "name": "PrincipalDisplayName", "type": "string" },
+              { "name": "Role", "type": "string" },
+              { "name": "AccessRight", "type": "string" },
+              { "name": "AssignmentType", "type": "string" }
+            ]
+          },
+          "Custom-FabricDataLineage_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "SourceDatasetId", "type": "string" },
+              { "name": "SourceDatasetName", "type": "string" },
+              { "name": "TargetDatasetId", "type": "string" },
+              { "name": "TargetDatasetName", "type": "string" },
+              { "name": "DataflowId", "type": "string" },
+              { "name": "DataflowName", "type": "string" },
+              { "name": "DatasourceId", "type": "string" },
+              { "name": "DatasourceType", "type": "string" },
+              { "name": "DependencyType", "type": "string" },
+              { "name": "ConnectionDetails", "type": "dynamic" },
+              { "name": "LineageType", "type": "string" }
+            ]
+          },
+          "Custom-FabricSemanticModels_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "DatasetId", "type": "string" },
+              { "name": "DatasetName", "type": "string" },
+              { "name": "RefreshId", "type": "string" },
+              { "name": "RefreshType", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTime", "type": "datetime" },
+              { "name": "EndTime", "type": "datetime" },
+              { "name": "DurationSeconds", "type": "real" },
+              { "name": "ServiceExceptionJson", "type": "string" },
+              { "name": "UserCount", "type": "int" },
+              { "name": "IsDirectQuery", "type": "boolean" },
+              { "name": "MetricType", "type": "string" }
+            ]
+          },
+          "Custom-FabricRealTimeIntelligence_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "EventstreamId", "type": "string" },
+              { "name": "EventstreamName", "type": "string" },
+              { "name": "KQLDatabaseId", "type": "string" },
+              { "name": "KQLDatabaseName", "type": "string" },
+              { "name": "Description", "type": "string" },
+              { "name": "CreatedDate", "type": "datetime" },
+              { "name": "LastUpdated", "type": "datetime" },
+              { "name": "MetricType", "type": "string" }
+            ]
+          },
+          "Custom-FabricMirroring_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "MirrorId", "type": "string" },
+              { "name": "MirrorName", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "LastSyncTime", "type": "datetime" },
+              { "name": "SyncDurationSeconds", "type": "real" },
+              { "name": "SourceConnectionStatus", "type": "string" },
+              { "name": "Description", "type": "string" },
+              { "name": "CreatedDate", "type": "datetime" },
+              { "name": "LastUpdated", "type": "datetime" },
+              { "name": "MetricType", "type": "string" }
+            ]
+          },
+          "Custom-FabricMLAI_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "ModelId", "type": "string" },
+              { "name": "ModelName", "type": "string" },
+              { "name": "ExperimentId", "type": "string" },
+              { "name": "ExperimentName", "type": "string" },
+              { "name": "Description", "type": "string" },
+              { "name": "CreatedDate", "type": "datetime" },
+              { "name": "LastUpdated", "type": "datetime" },
+              { "name": "MetricType", "type": "string" }
+            ]
           }
         },
         "destinations": {
@@ -243,6 +434,78 @@
             "destinations": ["laDest"],
             "transformKql": "source",
             "outputStream": "Custom-FabricItemDetails_CL"
+          },
+          {
+            "streams": ["Custom-FabricOneLakeStorage_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricOneLakeStorage_CL"
+          },
+          {
+            "streams": ["Custom-FabricSparkJobs_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkJobs_CL"
+          },
+          {
+            "streams": ["Custom-FabricSparkJobRuns_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkJobRuns_CL"
+          },
+          {
+            "streams": ["Custom-FabricNotebooks_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricNotebooks_CL"
+          },
+          {
+            "streams": ["Custom-FabricNotebookRuns_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricNotebookRuns_CL"
+          },
+          {
+            "streams": ["Custom-FabricGitIntegration_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricGitIntegration_CL"
+          },
+          {
+            "streams": ["Custom-FabricPermissions_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricPermissions_CL"
+          },
+          {
+            "streams": ["Custom-FabricDataLineage_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricDataLineage_CL"
+          },
+          {
+            "streams": ["Custom-FabricSemanticModels_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSemanticModels_CL"
+          },
+          {
+            "streams": ["Custom-FabricRealTimeIntelligence_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricRealTimeIntelligence_CL"
+          },
+          {
+            "streams": ["Custom-FabricMirroring_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricMirroring_CL"
+          },
+          {
+            "streams": ["Custom-FabricMLAI_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricMLAI_CL"
           }
         ]
       }
