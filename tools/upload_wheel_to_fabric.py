@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-Enhanced upload script with optional publish functionality.
-
 This script uploads a Python wheel (.whl) file to a Fabric Environment
 and optionally publishes it immediately.
 
