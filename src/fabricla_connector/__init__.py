@@ -87,19 +87,33 @@ from .workflows import (
     collect_and_ingest_dataset_refreshes,
     collect_and_ingest_capacity_utilization,
     collect_and_ingest_user_activity,
+    collect_and_ingest_onelake_storage,
+    collect_and_ingest_spark_jobs,
+    collect_and_ingest_notebooks,
+    collect_and_ingest_git_integration,
+    run_operational_monitoring_cycle,
     run_full_monitoring_cycle_enhanced,
     collect_and_ingest_pipeline_data_enhanced,
-    validate_and_test_configuration
-)
-
-# Import intelligent monitoring workflows
-from .intelligent_workflows import (
+    validate_and_test_configuration,
+    # Intelligent workflows
     run_intelligent_monitoring_cycle,
     check_workspace_monitoring_status,
     get_collection_recommendations,
     run_full_monitoring_cycle_intelligent,
     run_complementary_monitoring_cycle,
-    run_minimal_monitoring_cycle
+    run_minimal_monitoring_cycle,
+    # Phase 2: Security & Governance
+    collect_and_ingest_access_permissions,
+    collect_and_ingest_data_lineage,
+    collect_and_ingest_semantic_models,
+    run_compliance_monitoring_cycle,
+    # Phase 3: Advanced Workloads
+    collect_and_ingest_real_time_intelligence,
+    collect_and_ingest_mirroring,
+    collect_and_ingest_ml_ai,
+    run_advanced_workloads_monitoring_cycle,
+    # Comprehensive monitoring
+    run_comprehensive_monitoring_cycle
 )
 
 from .monitoring_detection import (

@@ -1,0 +1,318 @@
+{
+  "tables": [
+    {
+      "tableName": "FabricPermissions_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "CapacityId",
+          "type": "string"
+        },
+        {
+          "name": "ItemId",
+          "type": "string"
+        },
+        {
+          "name": "ItemName",
+          "type": "string"
+        },
+        {
+          "name": "ItemType",
+          "type": "string"
+        },
+        {
+          "name": "PrincipalId",
+          "type": "string"
+        },
+        {
+          "name": "PrincipalType",
+          "type": "string"
+        },
+        {
+          "name": "PrincipalDisplayName",
+          "type": "string"
+        },
+        {
+          "name": "Role",
+          "type": "string"
+        },
+        {
+          "name": "AccessRight",
+          "type": "string"
+        },
+        {
+          "name": "AssignmentType",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricDataLineage_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "SourceDatasetId",
+          "type": "string"
+        },
+        {
+          "name": "SourceDatasetName",
+          "type": "string"
+        },
+        {
+          "name": "TargetDatasetId",
+          "type": "string"
+        },
+        {
+          "name": "TargetDatasetName",
+          "type": "string"
+        },
+        {
+          "name": "DataflowId",
+          "type": "string"
+        },
+        {
+          "name": "DataflowName",
+          "type": "string"
+        },
+        {
+          "name": "DatasourceId",
+          "type": "string"
+        },
+        {
+          "name": "DatasourceType",
+          "type": "string"
+        },
+        {
+          "name": "DependencyType",
+          "type": "string"
+        },
+        {
+          "name": "ConnectionDetails",
+          "type": "dynamic"
+        },
+        {
+          "name": "LineageType",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricSemanticModels_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "DatasetId",
+          "type": "string"
+        },
+        {
+          "name": "DatasetName",
+          "type": "string"
+        },
+        {
+          "name": "RefreshId",
+          "type": "string"
+        },
+        {
+          "name": "RefreshType",
+          "type": "string"
+        },
+        {
+          "name": "Status",
+          "type": "string"
+        },
+        {
+          "name": "StartTime",
+          "type": "datetime"
+        },
+        {
+          "name": "EndTime",
+          "type": "datetime"
+        },
+        {
+          "name": "DurationSeconds",
+          "type": "real"
+        },
+        {
+          "name": "ServiceExceptionJson",
+          "type": "string"
+        },
+        {
+          "name": "UserCount",
+          "type": "int"
+        },
+        {
+          "name": "IsDirectQuery",
+          "type": "bool"
+        },
+        {
+          "name": "MetricType",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricRealTimeIntelligence_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "EventstreamId",
+          "type": "string"
+        },
+        {
+          "name": "EventstreamName",
+          "type": "string"
+        },
+        {
+          "name": "KQLDatabaseId",
+          "type": "string"
+        },
+        {
+          "name": "KQLDatabaseName",
+          "type": "string"
+        },
+        {
+          "name": "Description",
+          "type": "string"
+        },
+        {
+          "name": "CreatedDate",
+          "type": "datetime"
+        },
+        {
+          "name": "LastUpdated",
+          "type": "datetime"
+        },
+        {
+          "name": "MetricType",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricMirroring_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "MirrorId",
+          "type": "string"
+        },
+        {
+          "name": "MirrorName",
+          "type": "string"
+        },
+        {
+          "name": "Status",
+          "type": "string"
+        },
+        {
+          "name": "LastSyncTime",
+          "type": "datetime"
+        },
+        {
+          "name": "SyncDurationSeconds",
+          "type": "real"
+        },
+        {
+          "name": "SourceConnectionStatus",
+          "type": "string"
+        },
+        {
+          "name": "Description",
+          "type": "string"
+        },
+        {
+          "name": "CreatedDate",
+          "type": "datetime"
+        },
+        {
+          "name": "LastUpdated",
+          "type": "datetime"
+        },
+        {
+          "name": "MetricType",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricMLAI_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "ModelId",
+          "type": "string"
+        },
+        {
+          "name": "ModelName",
+          "type": "string"
+        },
+        {
+          "name": "ExperimentId",
+          "type": "string"
+        },
+        {
+          "name": "ExperimentName",
+          "type": "string"
+        },
+        {
+          "name": "Description",
+          "type": "string"
+        },
+        {
+          "name": "CreatedDate",
+          "type": "datetime"
+        },
+        {
+          "name": "LastUpdated",
+          "type": "datetime"
+        },
+        {
+          "name": "MetricType",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}

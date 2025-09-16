@@ -1,0 +1,322 @@
+{
+  "tables": [
+    {
+      "tableName": "FabricOneLakeStorage_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "LakehouseId",
+          "type": "string"
+        },
+        {
+          "name": "LakehouseName",
+          "type": "string"
+        },
+        {
+          "name": "WarehouseId",
+          "type": "string"
+        },
+        {
+          "name": "WarehouseName",
+          "type": "string"
+        },
+        {
+          "name": "ItemType",
+          "type": "string"
+        },
+        {
+          "name": "CreatedDate",
+          "type": "datetime"
+        },
+        {
+          "name": "LastUpdated",
+          "type": "datetime"
+        },
+        {
+          "name": "TableCount",
+          "type": "int"
+        },
+        {
+          "name": "OneLakePath",
+          "type": "string"
+        },
+        {
+          "name": "SqlEndpointId",
+          "type": "string"
+        },
+        {
+          "name": "ConnectionString",
+          "type": "string"
+        },
+        {
+          "name": "Description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricSparkJobs_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "JobDefinitionId",
+          "type": "string"
+        },
+        {
+          "name": "JobDefinitionName",
+          "type": "string"
+        },
+        {
+          "name": "ItemType",
+          "type": "string"
+        },
+        {
+          "name": "CreatedDate",
+          "type": "datetime"
+        },
+        {
+          "name": "LastModified",
+          "type": "datetime"
+        },
+        {
+          "name": "Language",
+          "type": "string"
+        },
+        {
+          "name": "MainClass",
+          "type": "string"
+        },
+        {
+          "name": "MainFile",
+          "type": "string"
+        },
+        {
+          "name": "Arguments",
+          "type": "dynamic"
+        },
+        {
+          "name": "Libraries",
+          "type": "dynamic"
+        },
+        {
+          "name": "Description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricSparkJobRuns_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "JobDefinitionId",
+          "type": "string"
+        },
+        {
+          "name": "JobDefinitionName",
+          "type": "string"
+        },
+        {
+          "name": "RunId",
+          "type": "string"
+        },
+        {
+          "name": "Status",
+          "type": "string"
+        },
+        {
+          "name": "StartTimeUtc",
+          "type": "datetime"
+        },
+        {
+          "name": "EndTimeUtc",
+          "type": "datetime"
+        },
+        {
+          "name": "DurationMs",
+          "type": "long"
+        },
+        {
+          "name": "JobType",
+          "type": "string"
+        },
+        {
+          "name": "ItemType",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricNotebooks_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "NotebookId",
+          "type": "string"
+        },
+        {
+          "name": "NotebookName",
+          "type": "string"
+        },
+        {
+          "name": "ItemType",
+          "type": "string"
+        },
+        {
+          "name": "CreatedDate",
+          "type": "datetime"
+        },
+        {
+          "name": "LastModified",
+          "type": "datetime"
+        },
+        {
+          "name": "Description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricNotebookRuns_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "NotebookId",
+          "type": "string"
+        },
+        {
+          "name": "NotebookName",
+          "type": "string"
+        },
+        {
+          "name": "RunId",
+          "type": "string"
+        },
+        {
+          "name": "Status",
+          "type": "string"
+        },
+        {
+          "name": "StartTimeUtc",
+          "type": "datetime"
+        },
+        {
+          "name": "EndTimeUtc",
+          "type": "datetime"
+        },
+        {
+          "name": "DurationMs",
+          "type": "long"
+        },
+        {
+          "name": "ItemType",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "tableName": "FabricGitIntegration_CL",
+      "columns": [
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "WorkspaceId",
+          "type": "string"
+        },
+        {
+          "name": "GitProvider",
+          "type": "string"
+        },
+        {
+          "name": "OrganizationName",
+          "type": "string"
+        },
+        {
+          "name": "ProjectName",
+          "type": "string"
+        },
+        {
+          "name": "RepositoryName",
+          "type": "string"
+        },
+        {
+          "name": "BranchName",
+          "type": "string"
+        },
+        {
+          "name": "DirectoryName",
+          "type": "string"
+        },
+        {
+          "name": "ConnectionId",
+          "type": "string"
+        },
+        {
+          "name": "ItemId",
+          "type": "string"
+        },
+        {
+          "name": "ItemDisplayName",
+          "type": "string"
+        },
+        {
+          "name": "ItemType",
+          "type": "string"
+        },
+        {
+          "name": "ChangeType",
+          "type": "string"
+        },
+        {
+          "name": "ConflictType",
+          "type": "string"
+        },
+        {
+          "name": "StatusType",
+          "type": "string"
+        },
+        {
+          "name": "ConnectionStatus",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}
