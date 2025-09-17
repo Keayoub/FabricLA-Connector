@@ -92,26 +92,27 @@ class TestPipelineDataCollector(unittest.TestCase):
         self.mock_token = TestHelpers.mock_fabric_token()
         
     @unittest.skipIf(not FRAMEWORK_AVAILABLE, f"Framework not available: {framework_import_error}")
+    @patch('fabricla_connector.collectors.list_item_job_instances')
     @patch('fabricla_connector.collectors.get_fabric_token')
     @patch('fabricla_connector.collectors.requests.get')
-    def test_collect_pipeline_runs_success(self, mock_get, mock_token):
+    def test_collect_pipeline_runs_success(self, mock_get, mock_token, mock_job_instances):
         """Test successful pipeline run collection."""
         # Setup mocks
         mock_token.return_value = self.mock_token
         mock_response = TestHelpers.mock_api_response({
-            "value": [MockData.PIPELINE_RUN]
+            "value": [MockData.PIPELINE_ITEM]
         })
         mock_get.return_value = mock_response
+        mock_job_instances.return_value = [MockData.PIPELINE_RUN]
         
         # Create collector and collect data
         collector = PipelineDataCollector(
             workspace_id=self.workspace_id,
-            lookback_hours=24,
-            token=self.mock_token
+            lookback_hours=24
         )
         
         # Test collection
-        runs = list(collector.collect_pipeline_runs([self.pipeline_id]))
+        runs = list(collector.collect_pipeline_runs())
         
         # Verify results
         self.assertEqual(len(runs), 1)
@@ -136,15 +137,14 @@ class TestPipelineDataCollector(unittest.TestCase):
         # Create collector and collect data
         collector = PipelineDataCollector(
             workspace_id=self.workspace_id,
-            lookback_hours=24,
-            token=self.mock_token
+            lookback_hours=24
         )
         
         # Test collection
-        activities = list(collector.collect_activity_runs([{
-            'pipeline_id': self.pipeline_id,
-            'run_id': 'test-run-id'
-        }]))
+        activities = list(collector.collect_activity_runs(
+            pipeline_id=self.pipeline_id,
+            run_id='test-run-id'
+        ))
         
         # Verify results
         self.assertEqual(len(activities), 1)
@@ -180,8 +180,7 @@ class TestDatasetRefreshCollector(unittest.TestCase):
         # Create collector and collect data
         collector = DatasetRefreshCollector(
             workspace_id=self.workspace_id,
-            lookback_hours=24,
-            token=self.mock_token
+            lookback_hours=24
         )
         
         # Test collection
@@ -215,8 +214,7 @@ class TestCapacityUtilizationCollector(unittest.TestCase):
         # Create collector and collect data
         collector = CapacityUtilizationCollector(
             capacity_id=self.capacity_id,
-            lookback_hours=24,
-            token=self.mock_token
+            lookback_hours=24
         )
         
         # Test collection
@@ -249,8 +247,7 @@ class TestUserActivityCollector(unittest.TestCase):
         # Create collector and collect data
         collector = UserActivityCollector(
             workspace_id=self.workspace_id,
-            lookback_hours=24,
-            token=self.mock_token
+            lookback_hours=24
         )
         
         # Test collection
