@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 """
+Fabric Environment Upload Tool
+
 This script uploads a Python wheel (.whl) file to a Fabric Environment
-and optionally publishes it immediately.
+with retry logic, debugging, and optional publishing.
+
+Features:
+- Retry logic for transient failures with exponential backoff
+- Detailed error logging and debugging information  
+- Environment validation and graceful error handling
+- Optional immediate publishing after upload
 
 Usage:
-    # Upload to staging only (current behavior)
-    python tools/upload_wheel_to_fabric_enhanced.py \
+    # Upload to staging only with default retry (3 attempts)
+    python tools/upload_wheel_to_fabric.py \
         --workspace-id YOUR_WORKSPACE_ID \
         --environment-id YOUR_ENV_ID \
         --file dist/fabricla_connector-1.0.0-py3-none-any.whl
 
-    # Upload and publish immediately  
-    python tools/upload_wheel_to_fabric_enhanced.py \
+    # Upload and publish immediately with custom retry count
+    python tools/upload_wheel_to_fabric.py \
         --workspace-id YOUR_WORKSPACE_ID \
         --environment-id YOUR_ENV_ID \
         --file dist/fabricla_connector-1.0.0-py3-none-any.whl \
-        --publish
+        --publish --retries 5
 
 Authentication options:
     --token BEARER_TOKEN                    # Bearer token
@@ -52,11 +60,11 @@ except ImportError:
     AZURE_IDENTITY_AVAILABLE = False
 
 class FabricEnvironmentManager:
-    """Enhanced Fabric Environment manager with upload and publish capabilities."""
+    """Enhanced Fabric Environment manager with upload, publish capabilities, and retry logic."""
     
     def __init__(self, workspace_id: str, environment_id: str, 
-                 token: str = None, client_id: str = None, 
-                 client_secret: str = None, tenant_id: str = None):
+                 token: Optional[str] = None, client_id: Optional[str] = None, 
+                 client_secret: Optional[str] = None, tenant_id: Optional[str] = None):
         self.workspace_id = workspace_id
         self.environment_id = environment_id
         self.base_url = "https://api.fabric.microsoft.com/v1"
@@ -68,10 +76,11 @@ class FabricEnvironmentManager:
         self.session = requests.Session()
         self.session.headers.update({
             'Authorization': f'Bearer {self.token}',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'User-Agent': 'FabricLA-Connector/1.0.0'
         })
     
-    def _get_token(self, token: str, client_id: str, client_secret: str, tenant_id: str) -> str:
+    def _get_token(self, token: Optional[str], client_id: Optional[str], client_secret: Optional[str], tenant_id: Optional[str]) -> str:
         """Get authentication token using various methods."""
         
         if token:
@@ -97,8 +106,8 @@ class FabricEnvironmentManager:
         
         raise Exception("No authentication method available. Provide token or install azure-identity")
     
-    def upload_wheel(self, wheel_path: str) -> Dict[str, Any]:
-        """Upload wheel file to staging libraries."""
+    def upload_wheel(self, wheel_path: str, max_retries: int = 3) -> Dict[str, Any]:
+        """Upload wheel file to staging libraries with retry logic."""
         
         if not os.path.exists(wheel_path):
             raise FileNotFoundError(f"Wheel file not found: {wheel_path}")
@@ -108,15 +117,58 @@ class FabricEnvironmentManager:
         
         safe_print(f"📦 Uploading {wheel_name} ({wheel_size / 1024:.1f} KB)")
         
+        for attempt in range(max_retries):
+            try:
+                result = self._attempt_upload(wheel_path, wheel_name)
+                if result['success']:
+                    return result
+                
+                # If this was the last attempt, return the error
+                if attempt == max_retries - 1:
+                    return result
+                
+                # Wait before retry
+                wait_time = 2 ** attempt  # Exponential backoff
+                safe_print(f"⏳ Upload attempt {attempt + 1} failed, retrying in {wait_time}s...")
+                time.sleep(wait_time)
+                
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    return {
+                        'success': False,
+                        'error': f'Upload failed after {max_retries} attempts: {str(e)}',
+                        'wheel_name': wheel_name
+                    }
+                
+                wait_time = 2 ** attempt
+                safe_print(f"❌ Upload attempt {attempt + 1} failed with exception: {str(e)}")
+                safe_print(f"⏳ Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+        
+        return {
+            'success': False,
+            'error': f'Upload failed after {max_retries} attempts',
+            'wheel_name': wheel_name
+        }
+    
+    def _attempt_upload(self, wheel_path: str, wheel_name: str) -> Dict[str, Any]:
+        """Single upload attempt."""
         url = f"{self.base_url}/workspaces/{self.workspace_id}/environments/{self.environment_id}/staging/libraries"
         
+        # Create proper multipart form data
         with open(wheel_path, 'rb') as f:
-            files = {'file': (wheel_name, f, 'application/zip')}
+            files = {
+                'file': (wheel_name, f, 'application/octet-stream')
+            }
             
-            # Remove Content-Type for multipart upload
-            headers = {k: v for k, v in self.session.headers.items() if k.lower() != 'content-type'}
+            # Create new headers without Content-Type (requests will set it automatically for multipart)
+            headers = {
+                'Authorization': f'Bearer {self.token}',
+                'User-Agent': 'FabricLA-Connector/1.0.0'
+            }
             
-            response = self.session.post(url, files=files, headers=headers, timeout=120)
+            # Use fresh post request instead of session to avoid header conflicts
+            response = requests.post(url, files=files, headers=headers, timeout=120)
         
         if response.status_code == 200:
             safe_print(f"✅ Upload successful: {wheel_name} (staged)")
@@ -132,13 +184,14 @@ class FabricEnvironmentManager:
                 error_detail = response.json()
                 error_msg += f" - {error_detail}"
             except:
-                error_msg += f" - {response.text}"
+                error_msg += f" - {response.text[:200]}"  # Limit error text length
             
             safe_print(f"❌ {error_msg}")
             return {
                 'success': False,
                 'error': error_msg,
-                'status_code': response.status_code
+                'status_code': response.status_code,
+                'wheel_name': wheel_name
             }
     
     def publish_environment(self) -> Dict[str, Any]:
@@ -159,7 +212,14 @@ class FabricEnvironmentManager:
                 safe_print(f"📊 Long-running operation ID: {operation_id}")
                 
                 # Wait for completion (optional)
-                return self._wait_for_publish_completion(operation_id)
+                if operation_id:
+                    return self._wait_for_publish_completion(operation_id)
+                else:
+                    return {
+                        'success': True,
+                        'message': 'Environment published successfully (no operation ID)',
+                        'status_code': response.status_code
+                    }
             
             return {
                 'success': True,
@@ -234,11 +294,12 @@ class FabricEnvironmentManager:
         }
 
 def main():
-    parser = argparse.ArgumentParser(description='Upload wheel to Fabric Environment with optional publish')
+    parser = argparse.ArgumentParser(description='Upload wheel to Fabric Environment with optional publish and retry logic')
     parser.add_argument('--workspace-id', required=True, help='Fabric workspace ID')
     parser.add_argument('--environment-id', required=True, help='Fabric environment ID')
     parser.add_argument('--file', required=True, help='Path to wheel file')
     parser.add_argument('--publish', action='store_true', help='Publish environment after upload')
+    parser.add_argument('--retries', type=int, default=3, help='Number of retry attempts (default: 3)')
     
     # Authentication options
     parser.add_argument('--token', help='Bearer token for authentication')
@@ -260,7 +321,7 @@ def main():
         )
         
         # Upload wheel
-        upload_result = manager.upload_wheel(args.file)
+        upload_result = manager.upload_wheel(args.file, max_retries=args.retries)
         
         if not upload_result['success']:
             sys.exit(1)
