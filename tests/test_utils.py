@@ -78,6 +78,13 @@ class TestConfig:
 class MockData:
     """Mock data responses for testing."""
     
+    PIPELINE_ITEM = {
+        "id": "test-pipeline-id", 
+        "displayName": "Test Pipeline",
+        "type": "DataPipeline",
+        "workspaceId": "test-workspace-id"
+    }
+    
     PIPELINE_RUN = {
         "id": "test-run-id",
         "status": "Succeeded",
@@ -137,15 +144,15 @@ class MockData:
     USER_ACTIVITY = {
         "value": [
             {
-                "id": "test-activity-id",
-                "userId": "test-user-id",
-                "userEmail": "test@contoso.com",
-                "activityType": "DatasetRefresh",
-                "creationTime": "2024-01-15T10:00:00Z",
-                "itemName": "Test Dataset",
-                "workspaceName": "Test Workspace",
-                "itemType": "Dataset",
-                "objectId": "test-object-id"
+                "Id": "test-activity-id",
+                "UserId": "test-user-id",
+                "UserKey": "test@contoso.com",
+                "Activity": "DatasetRefresh",
+                "CreationTime": "2024-01-15T10:00:00Z",
+                "ItemName": "Test Dataset",
+                "WorkspaceName": "Test Workspace",
+                "ItemType": "Dataset",
+                "ObjectId": "test-object-id"
             }
         ]
     }

@@ -55,6 +55,7 @@ from . import ingestion
 from . import config
 from . import api
 from . import utils
+from . import mappers
 
 # Import intelligent monitoring modules
 from . import monitoring_detection
@@ -66,6 +67,14 @@ from .collectors import (
     DatasetRefreshCollector, 
     CapacityUtilizationCollector,
     UserActivityCollector
+)
+
+from .mappers import (
+    PipelineRunMapper,
+    ActivityRunMapper,
+    DatasetRefreshMapper,
+    CapacityMetricMapper,
+    UserActivityMapper
 )
 
 from .ingestion import post_rows_to_dcr, FabricIngestion
