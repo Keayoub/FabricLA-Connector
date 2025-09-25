@@ -2,6 +2,8 @@
 """
 Azure & Fabric Python Environment Setup Script
 This script creates and configures a Python environment for Azure and Fabric development.
+Downloads latest requirements from official Microsoft Synapse Spark Runtime repository:
+https://github.com/microsoft/synapse-spark-runtime/tree/main/Fabric
 """
 
 import subprocess
@@ -45,32 +47,67 @@ def setup_virtual_environment():
     
     return pip_path
 
-def install_packages(pip_path):
-    """Install required packages using pip."""
-    requirements_file = "requirements.txt"
+def download_requirements(runtime_version="1.3"):
+    """Download latest requirements from Microsoft repository."""
+    print(f"🔄 Downloading latest requirements for Fabric Runtime {runtime_version}...")
+    
+    # First install required packages for the downloader
+    downloader_packages = ["requests", "pyyaml"]
+    for package in downloader_packages:
+        if not run_command(f"python -m pip install {package}", f"Installing {package} for downloader"):
+            return False
+    
+    # Run the download script
+    return run_command(
+        f"python download_fabric_requirements.py", 
+        f"Downloading Fabric Runtime {runtime_version} requirements from Microsoft repository"
+    )
+
+def install_packages(pip_path, runtime_version="1.3"):
+    """Install required packages using pip based on selected Fabric runtime."""
+    requirements_file = f"requirements-fabric-{runtime_version}.txt"
+    python_version = "3.10" if runtime_version == "1.2" else "3.11"
+    
+    print(f"Installing packages for Fabric Runtime {runtime_version} (Python {python_version})")
+    
+    # Check if requirements file exists, if not download it
+    if not Path(requirements_file).exists():
+        print(f"📋 Requirements file {requirements_file} not found, downloading from Microsoft repository...")
+        if not download_requirements(runtime_version):
+            print("❌ Failed to download requirements, using fallback packages")
+            return install_fallback_packages(pip_path)
     
     if Path(requirements_file).exists():
         return run_command(
             f"{pip_path} install -r {requirements_file}", 
-            "Installing packages from requirements.txt"
+            f"Installing packages from {requirements_file}"
+        )
+    elif Path("requirements.txt").exists():
+        return run_command(
+            f"{pip_path} install -r requirements.txt", 
+            "Installing packages from requirements.txt (fallback)"
         )
     else:
-        # Install packages individually if requirements.txt doesn't exist
-        packages = [
-            "azure-identity>=1.15.0",
-            "azure-keyvault-secrets>=4.7.0",
-            "azure-monitor-ingestion>=1.0.0",
-            "msal>=1.24.0",
-            "requests>=2.31.0",
-            "pandas>=2.0.0",
-            "jupyter>=1.0.0",
-            "rich>=13.0.0"
-        ]
-        
-        for package in packages:
-            if not run_command(f"{pip_path} install {package}", f"Installing {package}"):
-                return False
-        return True
+        return install_fallback_packages(pip_path)
+
+def install_fallback_packages(pip_path):
+    """Install core packages if requirements download fails."""
+    print("📦 Installing core packages (fallback)...")
+    packages = [
+        "azure-identity>=1.16.0",
+        "azure-keyvault-secrets>=4.8.0",
+        "azure-monitor-ingestion>=1.0.3",
+        "msal>=1.28.0",
+        "requests>=2.31.0",
+        "pandas>=2.1.0",
+        "jupyter>=1.0.0",
+        "rich>=13.3.0"
+    ]
+    
+    for package in packages:
+        if not run_command(f"{pip_path} install {package}", f"Installing {package}"):
+            return False
+    return True
 
 def create_env_file():
     """Create a sample .env file for environment variables."""
@@ -111,7 +148,21 @@ DCR_IMMUTABLE_ID=dcr-your-dcr-id-here
 def main():
     """Main setup function."""
     print("🚀 Setting up Azure & Fabric Python Environment")
+    print("Based on official Microsoft Synapse Spark Runtime")
     print("=" * 50)
+    
+    # Ask for runtime version
+    while True:
+        runtime_choice = input("\nSelect Fabric Runtime version:\n1. Runtime 1.2 (Python 3.10, Spark 3.4)\n2. Runtime 1.3 (Python 3.11, Spark 3.5)\nEnter choice (1 or 2): ").strip()
+        if runtime_choice == "1":
+            runtime_version = "1.2"
+            break
+        elif runtime_choice == "2":
+            runtime_version = "1.3"
+            break
+        print("❌ Please enter '1' or '2'")
+    
+    print(f"\n✅ Selected Fabric Runtime {runtime_version}")
     
     # Setup virtual environment
     pip_path = setup_virtual_environment()
@@ -120,14 +171,14 @@ def main():
         return False
     
     # Install packages
-    if not install_packages(pip_path):
+    if not install_packages(pip_path, runtime_version):
         print("❌ Failed to install some packages")
         return False
     
     # Create environment file template
     create_env_file()
     
-    print("\n🎉 Environment setup complete!")
+    print(f"\n🎉 Environment setup complete for Fabric Runtime {runtime_version}!")
     print("\nNext steps:")
     print("1. Activate the virtual environment:")
     if sys.platform == "win32":
@@ -136,7 +187,9 @@ def main():
         print("   source azure-fabric-env/bin/activate")
     print("2. Copy .env.example to .env and fill in your credentials")
     print("3. Start Jupyter: jupyter notebook")
-    print("4. Open fabric_LA_collector.ipynb and run the cells")
+    print("4. Open your Fabric notebooks and run the cells")
+    print(f"\n📋 Requirements downloaded from official Microsoft repository")
+    print(f"📍 See requirements-fabric-{runtime_version}.txt for package details")
     
     return True
 
