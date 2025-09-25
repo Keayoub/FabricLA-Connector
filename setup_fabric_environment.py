@@ -26,14 +26,14 @@ def run_command(command, description):
             print(f"STDERR: {e.stderr}")
         return False
 
-def setup_virtual_environment():
-    """Create and activate a virtual environment."""
-    env_name = "azure-fabric-env"
-    
+def setup_virtual_environment(runtime_version="1.3"):
+    """Create and activate a virtual environment with version-specific naming."""
+    env_name = f".fabric-env-{runtime_version}"
+
     # Create virtual environment
     if not run_command(f"python -m venv {env_name}", f"Creating virtual environment '{env_name}'"):
-        return False
-    
+        return False, None
+
     # Determine activation script path
     if sys.platform == "win32":
         activate_script = f"{env_name}\\Scripts\\activate.bat"
@@ -41,11 +41,11 @@ def setup_virtual_environment():
     else:
         activate_script = f"{env_name}/bin/activate"
         pip_path = f"{env_name}/bin/pip"
-    
+
     print(f"📍 Virtual environment created at: {Path(env_name).absolute()}")
     print(f"📍 To activate manually, run: {activate_script}")
-    
-    return pip_path
+
+    return pip_path, env_name
 
 def download_requirements(runtime_version="1.3"):
     """Download latest requirements from Microsoft repository."""
@@ -165,7 +165,7 @@ def main():
     print(f"\n✅ Selected Fabric Runtime {runtime_version}")
     
     # Setup virtual environment
-    pip_path = setup_virtual_environment()
+    pip_path, env_name = setup_virtual_environment(runtime_version)
     if not pip_path:
         print("❌ Failed to create virtual environment")
         return False
@@ -179,12 +179,16 @@ def main():
     create_env_file()
     
     print(f"\n🎉 Environment setup complete for Fabric Runtime {runtime_version}!")
+    print(f"\nEnvironment Details:")
+    print(f"- Runtime Version: {runtime_version}")
+    print(f"- Virtual Environment: {env_name}")
+    print(f"- Requirements File: requirements-fabric-{runtime_version}.txt")
     print("\nNext steps:")
     print("1. Activate the virtual environment:")
     if sys.platform == "win32":
-        print("   azure-fabric-env\\Scripts\\activate.bat")
+        print(f"   {env_name}\\Scripts\\activate.bat")
     else:
-        print("   source azure-fabric-env/bin/activate")
+        print(f"   source {env_name}/bin/activate")
     print("2. Copy .env.example to .env and fill in your credentials")
     print("3. Start Jupyter: jupyter notebook")
     print("4. Open your Fabric notebooks and run the cells")

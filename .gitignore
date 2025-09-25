@@ -429,6 +429,9 @@ infra/terraform/modules/
 infra/terraform/.terraform/
 .github/instructions/
 
+# technical folder
+.fabric-env-1.2/
+.fabric-env-1.3/
 fabricla_connector.egg-info/
 src/fabricla_connector.egg-info/
 
@@ -437,3 +440,4 @@ build/
 dist/
 *.egg-info/
 
+requirements-fabric-1.3.txt
