@@ -20,17 +20,17 @@ set /p runtime_choice="Enter your choice (1 or 2): "
 if "!runtime_choice!"=="1" (
     set FABRIC_RUNTIME=1.2
     set REQUIREMENTS_FILE=requirements-fabric-1.2.txt
-    set ENV_NAME=.venv
+    set ENV_NAME=.fabric-env-1.2
     echo Selected Fabric Runtime 1.2
-    echo Note: Environment will be created as .venv ^(VS Code standard^)
+    echo Note: Environment will be created as .fabric-env-1.2
     goto continue_setup
 )
 if "!runtime_choice!"=="2" (
     set FABRIC_RUNTIME=1.3
     set REQUIREMENTS_FILE=requirements-fabric-1.3.txt
-    set ENV_NAME=.venv
+    set ENV_NAME=.fabric-env-1.3
     echo Selected Fabric Runtime 1.3
-    echo Note: Environment will be created as .venv ^(VS Code standard^)
+    echo Note: Environment will be created as .fabric-env-1.3
     goto continue_setup
 )
 echo Invalid choice. Please run the script again and select 1 or 2.
@@ -41,22 +41,48 @@ exit /b 1
 
 echo.
 
-REM Check if Python 3.11 is installed
+REM Check if Python 3.11 or 3.10 is installed
 py -3.11 --version >nul 2>&1
 if errorlevel 1 (
-    echo Python 3.11 is not installed or not in PATH
-    echo Please install Python 3.11 from https://python.org
-    pause
-    exit /b 1
+    echo Python 3.11 not found, checking for Python 3.10...
+    py -3.10 --version >nul 2>&1
+    if errorlevel 1 (
+        echo Neither Python 3.11 nor 3.10 is installed or in PATH
+        echo Please install Python 3.10 or 3.11 from https://python.org
+        pause
+        exit /b 1
+    ) else (
+        echo Python 3.10 found and will be used
+    )
+) else (
+    echo Python 3.11 found and will be used
 )
 
 REM Create virtual environment
-echo Creating virtual environment for Fabric Runtime !FABRIC_RUNTIME! with Python 3.11...
-py -3.11 -m venv !ENV_NAME!
+echo Creating virtual environment for Fabric Runtime !FABRIC_RUNTIME!...
+
+REM Try Python 3.11 first, then 3.10
+py -3.11 -m venv !ENV_NAME! >nul 2>&1
 if errorlevel 1 (
-    echo Failed to create virtual environment
-    pause
-    exit /b 1
+    echo Python 3.11 failed, trying Python 3.10...
+    py -3.10 -m venv !ENV_NAME! >nul 2>&1
+    if errorlevel 1 (
+        echo Both Python 3.11 and 3.10 failed. Trying default python...
+        python -m venv !ENV_NAME! >nul 2>&1
+        if errorlevel 1 (
+            echo Failed to create virtual environment
+            echo Please ensure Python 3.10 or 3.11 is installed and accessible
+            echo You may need to run this script as Administrator
+            pause
+            exit /b 1
+        ) else (
+            echo Successfully created virtual environment with default Python
+        )
+    ) else (
+        echo Successfully created virtual environment with Python 3.10
+    )
+) else (
+    echo Successfully created virtual environment with Python 3.11
 )
 
 REM Activate virtual environment

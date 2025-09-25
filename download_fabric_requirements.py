@@ -69,6 +69,31 @@ def extract_conda_packages(yaml_content: Dict) -> List[str]:
     
     return conda_packages
 
+def normalize_package_format(package: str) -> str:
+    """Convert conda format to pip format."""
+    # Convert conda format (package=version=build) to pip format (package==version)
+    if '=' in package and '==' not in package:
+        parts = package.split('=')
+        if len(parts) >= 2:
+            package_name = parts[0]
+            version = parts[1]
+            
+            # Handle conda date-based versions that don't exist in pip
+            # Use latest available version for these packages
+            conda_packages_to_latest = {
+                'azure-identity': '',  # Use latest
+                'azure-keyvault': '',  # Use latest
+                'azure-storage': '',   # Use latest
+                'msal': '',           # Use latest
+                'msal-extensions': '', # Use latest
+            }
+            
+            if package_name in conda_packages_to_latest:
+                return package_name  # Return without version to get latest
+            
+            return f"{package_name}=={version}"
+    return package
+
 def filter_azure_packages(packages: List[str]) -> List[str]:
     """Filter packages relevant to Azure and Log Analytics integration."""
     azure_keywords = [
@@ -80,9 +105,11 @@ def filter_azure_packages(packages: List[str]) -> List[str]:
     
     filtered = []
     for package in packages:
-        package_name = package.split('==')[0].split('>=')[0].split('<=')[0].lower()
+        # Normalize format first
+        normalized_package = normalize_package_format(package)
+        package_name = normalized_package.split('==')[0].split('>=')[0].split('<=')[0].lower()
         if any(keyword in package_name for keyword in azure_keywords):
-            filtered.append(package)
+            filtered.append(normalized_package)
     
     return filtered
 
