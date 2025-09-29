@@ -145,12 +145,25 @@ class FabricIngestion:
         stream_name: str | None = None,
         monitor_token: str | None = None,
         credential: object | None = None,
+        dce_endpoint: str | None = None,
+        dcr_immutable_id: str | None = None,
+        # Optional defaults for ingestion behavior
+        batch_size: int | None = None,
+        max_retries: int | None = None,
+        retry_delay: float | None = None,
     ):
         # Resolve configuration from provided args or environment via get_config
         cfg = get_config()
-        self.dce = endpoint_host or cfg.get("DCE_ENDPOINT") or cfg.get("DCE_ENDPOINT")
-        self.dcr_id = dcr_id or cfg.get("DCR_IMMUTABLE_ID") or cfg.get("DCR_IMMUTABLE_ID")
-        self.stream = stream_name or cfg.get("STREAM_NAME")
+        # Support multiple naming conventions: endpoint_host or dce_endpoint
+        self.dce = endpoint_host or dce_endpoint or cfg.get("DCE_ENDPOINT") or cfg.get("AZURE_MONITOR_DCE_ENDPOINT")
+        # Support both dcr_id and dcr_immutable_id names
+        self.dcr_id = dcr_id or dcr_immutable_id or cfg.get("DCR_IMMUTABLE_ID") or cfg.get("AZURE_MONITOR_DCR_IMMUTABLE_ID")
+        self.stream = stream_name or cfg.get("STREAM_NAME") or cfg.get("AZURE_MONITOR_STREAM_NAME")
+
+        # Store defaults for ingest_data if provided
+        self.default_batch_size = batch_size
+        self.default_max_retries = max_retries
+        self.default_retry_delay = retry_delay
 
         # If a raw monitor_token string is provided, create a tiny TokenCredential wrapper
         if monitor_token and credential is None:
@@ -178,6 +191,23 @@ class FabricIngestion:
         # mypy/typing can be strict about credential protocols; the runtime Azure SDK
         # only needs an object with a get_token method. If typeshed complains, ignore.
         self.client = LogsIngestionClient(endpoint=self.dce, credential=credential)  # type: ignore[arg-type]
+
+    # Backwards-compatible wrapper expected by tests and other helpers
+    def ingest_data(self, records: List[Dict[str, Any]], batch_size: int | None = None, max_retries: int | None = None, retry_delay: float | None = None) -> Dict[str, int]:
+        """Compatibility wrapper that maps older test/API names to the current ingest method.
+
+        Parameters:
+            records: list of log records
+            batch_size: maps to ingest's chunk_size
+            max_retries: maps to ingest's max_retries
+            retry_delay: maps to ingest's backoff_factor
+        """
+        # Resolve defaults: constructor-provided -> method args -> library defaults
+        chunk_size = batch_size or self.default_batch_size or 1000
+        retries = max_retries if max_retries is not None else (self.default_max_retries if self.default_max_retries is not None else 3)
+        backoff = retry_delay if retry_delay is not None else (self.default_retry_delay if self.default_retry_delay is not None else 1.0)
+
+        return self.ingest(records, chunk_size, retries, backoff)
 
     def ingest(self, records: List[Dict[str, Any]], chunk_size: int = 1000, max_retries: int = 3, backoff_factor: float = 1.0) -> Dict[str, int]:
         """Ingest a list of records with simple retry/backoff for transient failures.
