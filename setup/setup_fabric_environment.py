@@ -13,13 +13,13 @@ from pathlib import Path
 
 def run_command(command, description):
     """Run a command and handle errors gracefully."""
-    print(f"🔄 {description}...")
+    print(f"Running: {description}...")
     try:
         result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-        print(f"✅ {description} completed successfully")
+        print(f"Success: {description} completed successfully")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ {description} failed: {e}")
+        print(f"Error: {description} failed: {e}")
         if e.stdout:
             print(f"STDOUT: {e.stdout}")
         if e.stderr:
@@ -28,7 +28,7 @@ def run_command(command, description):
 
 def setup_virtual_environment(runtime_version="1.3"):
     """Create and activate a virtual environment with version-specific naming."""
-    env_name = f".fabric-env-{runtime_version}"
+    env_name = f"../.fabric-env-{runtime_version}"
 
     # Create virtual environment
     if not run_command(f"python -m venv {env_name}", f"Creating virtual environment '{env_name}'"):
@@ -37,19 +37,19 @@ def setup_virtual_environment(runtime_version="1.3"):
     # Determine activation script path
     if sys.platform == "win32":
         activate_script = f"{env_name}\\Scripts\\activate.bat"
-        pip_path = f"{env_name}\\Scripts\\pip"
+        pip_path = f'"{Path(env_name).absolute()}\\Scripts\\pip"'
     else:
         activate_script = f"{env_name}/bin/activate"
-        pip_path = f"{env_name}/bin/pip"
+        pip_path = f'"{Path(env_name).absolute()}/bin/pip"'
 
-    print(f"📍 Virtual environment created at: {Path(env_name).absolute()}")
-    print(f"📍 To activate manually, run: {activate_script}")
+    print(f"Virtual environment created at: {Path(env_name).absolute()}")
+    print(f"To activate manually, run: {activate_script}")
 
     return pip_path, env_name
 
 def download_requirements(runtime_version="1.3"):
     """Download latest requirements from Microsoft repository."""
-    print(f"🔄 Downloading latest requirements for Fabric Runtime {runtime_version}...")
+    print(f"Downloading latest requirements for Fabric Runtime {runtime_version}...")
     
     # First install required packages for the downloader
     downloader_packages = ["requests", "pyyaml"]
@@ -72,9 +72,9 @@ def install_packages(pip_path, runtime_version="1.3"):
     
     # Check if requirements file exists, if not download it
     if not Path(requirements_file).exists():
-        print(f"📋 Requirements file {requirements_file} not found, downloading from Microsoft repository...")
+        print(f"Requirements file {requirements_file} not found, downloading from Microsoft repository...")
         if not download_requirements(runtime_version):
-            print("❌ Failed to download requirements, using fallback packages")
+            print("Failed to download requirements, using fallback packages")
             return install_fallback_packages(pip_path)
     
     if Path(requirements_file).exists():
@@ -82,9 +82,9 @@ def install_packages(pip_path, runtime_version="1.3"):
             f"{pip_path} install -r {requirements_file}", 
             f"Installing packages from {requirements_file}"
         )
-    elif Path("requirements.txt").exists():
+    elif Path("../requirements.txt").exists():
         return run_command(
-            f"{pip_path} install -r requirements.txt", 
+            f"{pip_path} install -r ../requirements.txt", 
             "Installing packages from requirements.txt (fallback)"
         )
     else:
@@ -92,7 +92,7 @@ def install_packages(pip_path, runtime_version="1.3"):
 
 def install_fallback_packages(pip_path):
     """Install core packages if requirements download fails."""
-    print("📦 Installing core packages (fallback)...")
+    print("Installing core packages (fallback)...")
     packages = [
         "azure-identity>=1.16.0",
         "azure-keyvault-secrets>=4.8.0",
@@ -136,18 +136,18 @@ DCR_IMMUTABLE_ID=dcr-your-dcr-id-here
 """
     
     try:
-        with open(".env.example", "w") as f:
+        with open("../.env.example", "w") as f:
             f.write(env_content)
-        print("✅ Created .env.example file")
-        print("📝 Copy .env.example to .env and fill in your actual values")
+        print("Created .env.example file")
+        print("Copy .env.example to .env and fill in your actual values")
         return True
     except Exception as e:
-        print(f"❌ Failed to create .env.example: {e}")
+        print(f"Failed to create .env.example: {e}")
         return False
 
 def main():
     """Main setup function."""
-    print("🚀 Setting up Azure & Fabric Python Environment")
+    print("Setting up Azure & Fabric Python Environment")
     print("Based on official Microsoft Synapse Spark Runtime")
     print("=" * 50)
     
@@ -160,25 +160,25 @@ def main():
         elif runtime_choice == "2":
             runtime_version = "1.3"
             break
-        print("❌ Please enter '1' or '2'")
+        print("Please enter '1' or '2'")
     
-    print(f"\n✅ Selected Fabric Runtime {runtime_version}")
+    print(f"\nSelected Fabric Runtime {runtime_version}")
     
     # Setup virtual environment
     pip_path, env_name = setup_virtual_environment(runtime_version)
     if not pip_path:
-        print("❌ Failed to create virtual environment")
+        print("Failed to create virtual environment")
         return False
     
     # Install packages
     if not install_packages(pip_path, runtime_version):
-        print("❌ Failed to install some packages")
+        print("Failed to install some packages")
         return False
     
     # Create environment file template
     create_env_file()
     
-    print(f"\n🎉 Environment setup complete for Fabric Runtime {runtime_version}!")
+    print(f"\nEnvironment setup complete for Fabric Runtime {runtime_version}!")
     print(f"\nEnvironment Details:")
     print(f"- Runtime Version: {runtime_version}")
     print(f"- Virtual Environment: {env_name}")
@@ -192,8 +192,8 @@ def main():
     print("2. Copy .env.example to .env and fill in your credentials")
     print("3. Start Jupyter: jupyter notebook")
     print("4. Open your Fabric notebooks and run the cells")
-    print(f"\n📋 Requirements downloaded from official Microsoft repository")
-    print(f"📍 See requirements-fabric-{runtime_version}.txt for package details")
+    print(f"\nRequirements downloaded from official Microsoft repository")
+    print(f"See requirements-fabric-{runtime_version}.txt for package details")
     
     return True
 

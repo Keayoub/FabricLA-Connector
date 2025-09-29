@@ -2067,3 +2067,424 @@ def run_comprehensive_monitoring_cycle(
         print(f"❌ {error_msg}")
     
     return overall_results
+
+
+# ================================
+# Spark Monitoring Workflows
+# ================================
+
+def collect_and_ingest_spark_applications(
+    workspace_id: str,
+    lookback_hours: int = 24,
+    custom_config: Optional[Dict[str, str]] = None,
+    max_items: int = 500
+) -> Dict[str, Any]:
+    """
+    Collect Spark applications from workspace and ingest to Log Analytics.
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        lookback_hours: Hours to look back for applications
+        custom_config: Optional custom configuration
+        max_items: Maximum items to collect
+        
+    Returns:
+        Dict with collection and ingestion results
+    """
+    from .collectors import collect_spark_applications_workspace
+    
+    print(f"🚀 Starting Spark applications collection for workspace {workspace_id}")
+    
+    results = {
+        "collected": 0,
+        "ingested": 0,
+        "errors": [],
+        "workspace_id": workspace_id,
+        "collection_type": "spark_applications"
+    }
+    
+    try:
+        # Get configuration
+        config = custom_config or get_config()
+        ingestion_config = get_ingestion_config()
+        
+        # Collect Spark applications
+        applications = []
+        for app in collect_spark_applications_workspace(workspace_id, lookback_hours, max_items):
+            applications.append(app)
+            results["collected"] += 1
+            
+        if not applications:
+            print("⚠️ No Spark applications collected")
+            return results
+            
+        print(f"📦 Collected {len(applications)} Spark applications")
+        
+        # Ingest to Log Analytics
+        if ingestion_config.get("enabled", True):
+            ingestion_result = post_rows_to_dcr_enhanced(
+                applications,
+                ingestion_config["dce_endpoint"],
+                ingestion_config["dcr_immutable_id"],
+                ingestion_config["stream_name"],
+                ingestion_config["table_name"]
+            )
+            
+            results["ingested"] = ingestion_result.get("ingested_count", 0)
+            if ingestion_result.get("errors"):
+                results["errors"].extend(ingestion_result["errors"])
+                
+        print(f"✅ Spark applications workflow completed")
+        print(f"   Collected: {results['collected']}")
+        print(f"   Ingested: {results['ingested']}")
+        
+    except Exception as e:
+        error_msg = f"Error in Spark applications collection: {str(e)}"
+        results["errors"].append(error_msg)
+        print(f"❌ {error_msg}")
+        
+    return results
+
+
+def collect_and_ingest_spark_item_applications(
+    workspace_id: str,
+    item_id: str,
+    item_type: str = "notebook",
+    lookback_hours: int = 24,
+    custom_config: Optional[Dict[str, str]] = None,
+    max_items: int = 100
+) -> Dict[str, Any]:
+    """
+    Collect Spark applications for specific item and ingest to Log Analytics.
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        item_id: Item ID (notebook, Spark job definition, etc.)
+        item_type: Type of item ('notebook', 'sparkjobdefinition', 'lakehouse')
+        lookback_hours: Hours to look back for applications
+        custom_config: Optional custom configuration
+        max_items: Maximum items to collect
+        
+    Returns:
+        Dict with collection and ingestion results
+    """
+    from .collectors import collect_spark_applications_item
+    
+    print(f"🚀 Starting Spark applications collection for {item_type} {item_id}")
+    
+    results = {
+        "collected": 0,
+        "ingested": 0,
+        "errors": [],
+        "workspace_id": workspace_id,
+        "item_id": item_id,
+        "item_type": item_type,
+        "collection_type": "spark_item_applications"
+    }
+    
+    try:
+        # Get configuration
+        config = custom_config or get_config()
+        ingestion_config = get_ingestion_config()
+        
+        # Collect Spark applications
+        applications = []
+        for app in collect_spark_applications_item(workspace_id, item_id, item_type, lookback_hours, max_items):
+            applications.append(app)
+            results["collected"] += 1
+            
+        if not applications:
+            print(f"⚠️ No Spark applications collected for {item_type} {item_id}")
+            return results
+            
+        print(f"📦 Collected {len(applications)} Spark applications for {item_type}")
+        
+        # Ingest to Log Analytics
+        if ingestion_config.get("enabled", True):
+            ingestion_result = post_rows_to_dcr_enhanced(
+                applications,
+                ingestion_config["dce_endpoint"],
+                ingestion_config["dcr_immutable_id"],
+                ingestion_config["stream_name"],
+                ingestion_config["table_name"]
+            )
+            
+            results["ingested"] = ingestion_result.get("ingested_count", 0)
+            if ingestion_result.get("errors"):
+                results["errors"].extend(ingestion_result["errors"])
+                
+        print(f"✅ Spark item applications workflow completed")
+        print(f"   Collected: {results['collected']}")
+        print(f"   Ingested: {results['ingested']}")
+        
+    except Exception as e:
+        error_msg = f"Error in Spark item applications collection: {str(e)}"
+        results["errors"].append(error_msg)
+        print(f"❌ {error_msg}")
+        
+    return results
+
+
+def collect_and_ingest_spark_logs(
+    workspace_id: str,
+    session_id: str,
+    log_types: List[str] = ["driver", "executor", "livy"],
+    custom_config: Optional[Dict[str, str]] = None,
+    max_lines: int = 1000
+) -> Dict[str, Any]:
+    """
+    Collect Spark logs for a session and ingest to Log Analytics.
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        session_id: Spark session ID
+        log_types: Types of logs to collect
+        custom_config: Optional custom configuration
+        max_lines: Maximum log lines per type
+        
+    Returns:
+        Dict with collection and ingestion results
+    """
+    from .collectors import collect_spark_logs
+    
+    print(f"🚀 Starting Spark logs collection for session {session_id}")
+    
+    results = {
+        "collected": 0,
+        "ingested": 0,
+        "errors": [],
+        "workspace_id": workspace_id,
+        "session_id": session_id,
+        "collection_type": "spark_logs"
+    }
+    
+    try:
+        # Get configuration
+        config = custom_config or get_config()
+        ingestion_config = get_ingestion_config()
+        
+        # Collect logs for each type
+        all_logs = []
+        for log_type in log_types:
+            logs = []
+            for log_entry in collect_spark_logs(workspace_id, session_id, log_type, max_lines):
+                logs.append(log_entry)
+                results["collected"] += 1
+                
+            all_logs.extend(logs)
+            print(f"📦 Collected {len(logs)} {log_type} log entries")
+            
+        if not all_logs:
+            print("⚠️ No Spark logs collected")
+            return results
+            
+        # Ingest to Log Analytics
+        if ingestion_config.get("enabled", True):
+            ingestion_result = post_rows_to_dcr_enhanced(
+                all_logs,
+                ingestion_config["dce_endpoint"],
+                ingestion_config["dcr_immutable_id"],
+                ingestion_config["stream_name"],
+                ingestion_config["table_name"]
+            )
+            
+            results["ingested"] = ingestion_result.get("ingested_count", 0)
+            if ingestion_result.get("errors"):
+                results["errors"].extend(ingestion_result["errors"])
+                
+        print(f"✅ Spark logs workflow completed")
+        print(f"   Collected: {results['collected']}")
+        print(f"   Ingested: {results['ingested']}")
+        
+    except Exception as e:
+        error_msg = f"Error in Spark logs collection: {str(e)}"
+        results["errors"].append(error_msg)
+        print(f"❌ {error_msg}")
+        
+    return results
+
+
+def collect_and_ingest_spark_metrics(
+    workspace_id: str,
+    session_id: str,
+    application_id: str,
+    custom_config: Optional[Dict[str, str]] = None
+) -> Dict[str, Any]:
+    """
+    Collect Spark metrics for an application and ingest to Log Analytics.
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        session_id: Spark session ID
+        application_id: Spark application ID
+        custom_config: Optional custom configuration
+        
+    Returns:
+        Dict with collection and ingestion results
+    """
+    from .collectors import collect_spark_metrics
+    
+    print(f"🚀 Starting Spark metrics collection for application {application_id}")
+    
+    results = {
+        "collected": 0,
+        "ingested": 0,
+        "errors": [],
+        "workspace_id": workspace_id,
+        "session_id": session_id,
+        "application_id": application_id,
+        "collection_type": "spark_metrics"
+    }
+    
+    try:
+        # Get configuration
+        config = custom_config or get_config()
+        ingestion_config = get_ingestion_config()
+        
+        # Collect Spark metrics
+        metrics = []
+        for metric in collect_spark_metrics(workspace_id, session_id, application_id):
+            metrics.append(metric)
+            results["collected"] += 1
+            
+        if not metrics:
+            print("⚠️ No Spark metrics collected")
+            return results
+            
+        print(f"📦 Collected {len(metrics)} Spark metrics")
+        
+        # Ingest to Log Analytics
+        if ingestion_config.get("enabled", True):
+            ingestion_result = post_rows_to_dcr_enhanced(
+                metrics,
+                ingestion_config["dce_endpoint"],
+                ingestion_config["dcr_immutable_id"],
+                ingestion_config["stream_name"],
+                ingestion_config["table_name"]
+            )
+            
+            results["ingested"] = ingestion_result.get("ingested_count", 0)
+            if ingestion_result.get("errors"):
+                results["errors"].extend(ingestion_result["errors"])
+                
+        print(f"✅ Spark metrics workflow completed")
+        print(f"   Collected: {results['collected']}")
+        print(f"   Ingested: {results['ingested']}")
+        
+    except Exception as e:
+        error_msg = f"Error in Spark metrics collection: {str(e)}"
+        results["errors"].append(error_msg)
+        print(f"❌ {error_msg}")
+        
+    return results
+
+
+def comprehensive_spark_monitoring(
+    workspace_id: str,
+    lookback_hours: int = 24,
+    include_logs: bool = False,
+    include_metrics: bool = True,
+    custom_config: Optional[Dict[str, str]] = None,
+    max_applications: int = 100,
+    max_log_lines: int = 500
+) -> Dict[str, Any]:
+    """
+    Comprehensive Spark monitoring workflow that collects applications, logs, and metrics.
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        lookback_hours: Hours to look back for applications
+        include_logs: Whether to collect detailed logs
+        include_metrics: Whether to collect detailed metrics
+        custom_config: Optional custom configuration
+        max_applications: Maximum applications to process
+        max_log_lines: Maximum log lines per session
+        
+    Returns:
+        Dict with comprehensive results
+    """
+    print(f"🚀 Starting comprehensive Spark monitoring for workspace {workspace_id}")
+    
+    overall_results = {
+        "workspace_id": workspace_id,
+        "monitoring_type": "comprehensive_spark",
+        "applications_collected": 0,
+        "logs_collected": 0,
+        "metrics_collected": 0,
+        "total_ingested": 0,
+        "errors": [],
+        "details": {}
+    }
+    
+    try:
+        # Step 1: Collect Spark applications
+        print("📊 Step 1: Collecting Spark applications...")
+        app_results = collect_and_ingest_spark_applications(
+            workspace_id, lookback_hours, custom_config, max_applications
+        )
+        overall_results["applications_collected"] = app_results["collected"]
+        overall_results["total_ingested"] += app_results["ingested"]
+        overall_results["details"]["applications"] = app_results
+        
+        if app_results["errors"]:
+            overall_results["errors"].extend(app_results["errors"])
+            
+        # Step 2: Collect detailed logs and metrics for recent applications
+        if (include_logs or include_metrics) and app_results["collected"] > 0:
+            print("📊 Step 2: Collecting detailed Spark data...")
+            
+            # Get recent applications from the collection
+            from .collectors import collect_spark_applications_workspace
+            recent_apps = []
+            for app in collect_spark_applications_workspace(workspace_id, 6, 10):  # Last 6 hours, max 10 apps
+                recent_apps.append(app)
+                
+            for app in recent_apps:
+                session_id = app.get("SessionId")
+                application_id = app.get("ApplicationId")
+                
+                if not session_id:
+                    continue
+                    
+                try:
+                    # Collect logs if requested
+                    if include_logs:
+                        log_results = collect_and_ingest_spark_logs(
+                            workspace_id, session_id, ["driver", "executor"], custom_config, max_log_lines
+                        )
+                        overall_results["logs_collected"] += log_results["collected"]
+                        overall_results["total_ingested"] += log_results["ingested"]
+                        
+                        if log_results["errors"]:
+                            overall_results["errors"].extend(log_results["errors"])
+                            
+                    # Collect metrics if requested and application ID is available
+                    if include_metrics and application_id:
+                        metrics_results = collect_and_ingest_spark_metrics(
+                            workspace_id, session_id, application_id, custom_config
+                        )
+                        overall_results["metrics_collected"] += metrics_results["collected"]
+                        overall_results["total_ingested"] += metrics_results["ingested"]
+                        
+                        if metrics_results["errors"]:
+                            overall_results["errors"].extend(metrics_results["errors"])
+                            
+                except Exception as e:
+                    error_msg = f"Error processing application {application_id}: {str(e)}"
+                    overall_results["errors"].append(error_msg)
+                    print(f"⚠️ {error_msg}")
+                    continue
+                    
+        print(f"✅ Comprehensive Spark monitoring completed")
+        print(f"   Applications: {overall_results['applications_collected']}")
+        print(f"   Logs: {overall_results['logs_collected']}")
+        print(f"   Metrics: {overall_results['metrics_collected']}")
+        print(f"   Total ingested: {overall_results['total_ingested']}")
+        print(f"   Errors: {len(overall_results['errors'])}")
+        
+    except Exception as e:
+        error_msg = f"Error in comprehensive Spark monitoring: {str(e)}"
+        overall_results["errors"].append(error_msg)
+        print(f"❌ {error_msg}")
+        
+    return overall_results

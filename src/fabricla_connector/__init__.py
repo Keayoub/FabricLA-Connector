@@ -100,6 +100,12 @@ from .workflows import (
     collect_and_ingest_spark_jobs,
     collect_and_ingest_notebooks,
     collect_and_ingest_git_integration,
+    # Spark Monitoring API workflows
+    collect_and_ingest_spark_applications,
+    collect_and_ingest_spark_item_applications,
+    collect_and_ingest_spark_logs,
+    collect_and_ingest_spark_metrics,
+    comprehensive_spark_monitoring,
     run_operational_monitoring_cycle,
     run_full_monitoring_cycle_enhanced,
     collect_and_ingest_pipeline_data_enhanced,

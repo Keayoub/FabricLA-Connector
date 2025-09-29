@@ -1445,3 +1445,430 @@ class MLAICollector:
                     
         except Exception as e:
             print(f"❌ Error collecting ML Experiments: {str(e)}")
+
+
+# ================================
+# Spark Monitoring API Collectors
+# ================================
+
+def collect_spark_applications_workspace(
+    workspace_id: str, 
+    lookback_hours: int = 24,
+    max_items: int = 500
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Spark applications from workspace level
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        lookback_hours: Hours to look back for applications
+        max_items: Maximum items to retrieve
+        
+    Yields:
+        Dict containing Spark application information
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Get all Spark applications in workspace
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/sessions"
+        
+        print(f"🔍 Collecting Spark applications for workspace {workspace_id}")
+        
+        response = requests.get(url, headers=headers, timeout=30)
+        data = handle_api_response(response, f"Workspace Spark Applications - {workspace_id}")
+        
+        if not data or "value" not in data:
+            print("⚠️ No Spark applications found in workspace")
+            return
+            
+        sessions = data["value"]
+        print(f"📊 Found {len(sessions)} Spark sessions")
+        
+        cutoff_time = datetime.utcnow() - timedelta(hours=lookback_hours)
+        collected_count = 0
+        
+        for session in sessions:
+            if collected_count >= max_items:
+                print(f"⚠️ Reached max items limit ({max_items})")
+                break
+                
+            try:
+                # Check if session is within lookback period
+                session_time = parse_iso(session.get('submissionTime', ''))
+                if session_time and session_time < cutoff_time:
+                    continue
+                
+                # Get detailed session information
+                session_id = session.get('id')
+                session_details = get_spark_session_details(workspace_id, session_id, headers)
+                
+                yield {
+                    "WorkspaceId": workspace_id,
+                    "SessionId": session_id,
+                    "ApplicationId": session.get('appId'),
+                    "ApplicationName": session.get('name'),
+                    "State": session.get('state'),
+                    "SubmissionTime": session.get('submissionTime'),
+                    "Kind": session.get('kind'),
+                    "SparkVersion": session.get('sparkVersion'),
+                    "DriverCores": session_details.get('driverCores'),
+                    "DriverMemory": session_details.get('driverMemory'),
+                    "ExecutorCores": session_details.get('executorCores'),
+                    "ExecutorMemory": session_details.get('executorMemory'),
+                    "ExecutorCount": session_details.get('numExecutors'),
+                    "Tags": json.dumps(session.get('tags', {})),
+                    "CollectedAt": iso_now(),
+                    "MetricType": "SparkApplication"
+                }
+                
+                collected_count += 1
+                
+            except Exception as e:
+                print(f"⚠️ Error processing session {session.get('id', 'unknown')}: {str(e)}")
+                continue
+                
+        print(f"✅ Collected {collected_count} Spark applications")
+        
+    except Exception as e:
+        print(f"❌ Error collecting workspace Spark applications: {str(e)}")
+
+
+def collect_spark_applications_item(
+    workspace_id: str,
+    item_id: str,
+    item_type: str = "notebook",
+    lookback_hours: int = 24,
+    max_items: int = 100
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Spark applications for specific item (notebook, Spark job definition, etc.)
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        item_id: Item ID (notebook, Spark job definition, etc.)
+        item_type: Type of item ('notebook', 'sparkjobdefinition', 'lakehouse')
+        lookback_hours: Hours to look back for applications
+        max_items: Maximum items to retrieve
+        
+    Yields:
+        Dict containing Spark application information
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Map item types to API endpoints
+        endpoint_map = {
+            "notebook": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/notebooks/{item_id}/spark/sessions",
+            "sparkjobdefinition": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/sparkJobDefinitions/{item_id}/spark/sessions",
+            "lakehouse": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/lakehouses/{item_id}/spark/sessions"
+        }
+        
+        url = endpoint_map.get(item_type.lower())
+        if not url:
+            print(f"❌ Unsupported item type: {item_type}")
+            return
+            
+        print(f"🔍 Collecting Spark applications for {item_type} {item_id}")
+        
+        response = requests.get(url, headers=headers, timeout=30)
+        data = handle_api_response(response, f"{item_type} Spark Applications - {item_id}")
+        
+        if not data or "value" not in data:
+            print(f"⚠️ No Spark applications found for {item_type} {item_id}")
+            return
+            
+        sessions = data["value"]
+        print(f"📊 Found {len(sessions)} Spark sessions for {item_type}")
+        
+        cutoff_time = datetime.utcnow() - timedelta(hours=lookback_hours)
+        collected_count = 0
+        
+        for session in sessions:
+            if collected_count >= max_items:
+                break
+                
+            try:
+                session_time = parse_iso(session.get('submissionTime', ''))
+                if session_time and session_time < cutoff_time:
+                    continue
+                
+                session_id = session.get('id')
+                session_details = get_spark_session_details(workspace_id, session_id, headers, item_type, item_id)
+                
+                yield {
+                    "WorkspaceId": workspace_id,
+                    "ItemId": item_id,
+                    "ItemType": item_type,
+                    "SessionId": session_id,
+                    "ApplicationId": session.get('appId'),
+                    "ApplicationName": session.get('name'),
+                    "State": session.get('state'),
+                    "SubmissionTime": session.get('submissionTime'),
+                    "Kind": session.get('kind'),
+                    "SparkVersion": session.get('sparkVersion'),
+                    "DriverCores": session_details.get('driverCores'),
+                    "DriverMemory": session_details.get('driverMemory'),
+                    "ExecutorCores": session_details.get('executorCores'),
+                    "ExecutorMemory": session_details.get('executorMemory'),
+                    "ExecutorCount": session_details.get('numExecutors'),
+                    "Duration": session_details.get('duration'),
+                    "Tags": json.dumps(session.get('tags', {})),
+                    "CollectedAt": iso_now(),
+                    "MetricType": "SparkApplicationItem"
+                }
+                
+                collected_count += 1
+                
+            except Exception as e:
+                print(f"⚠️ Error processing session {session.get('id', 'unknown')}: {str(e)}")
+                continue
+                
+        print(f"✅ Collected {collected_count} Spark applications for {item_type}")
+        
+    except Exception as e:
+        print(f"❌ Error collecting {item_type} Spark applications: {str(e)}")
+
+
+def collect_spark_logs(
+    workspace_id: str,
+    session_id: str,
+    log_type: str = "driver",
+    max_lines: int = 1000
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Spark logs (driver, executor, livy) for a specific session
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        session_id: Spark session ID
+        log_type: Type of logs ('driver', 'executor', 'livy')
+        max_lines: Maximum log lines to retrieve
+        
+    Yields:
+        Dict containing log entries
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Map log types to API endpoints
+        endpoint_map = {
+            "driver": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/sessions/{session_id}/driverlog",
+            "executor": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/sessions/{session_id}/executorlog",
+            "livy": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/sessions/{session_id}/livylog"
+        }
+        
+        url = endpoint_map.get(log_type.lower())
+        if not url:
+            print(f"❌ Unsupported log type: {log_type}")
+            return
+            
+        print(f"🔍 Collecting {log_type} logs for session {session_id}")
+        
+        response = requests.get(url, headers=headers, timeout=60)
+        
+        if response.status_code == 200:
+            log_content = response.text
+            log_lines = log_content.split('\n')
+            
+            print(f"📊 Found {len(log_lines)} log lines")
+            
+            for i, line in enumerate(log_lines[-max_lines:], 1):  # Get last N lines
+                if line.strip():
+                    yield {
+                        "WorkspaceId": workspace_id,
+                        "SessionId": session_id,
+                        "LogType": log_type,
+                        "LineNumber": i,
+                        "LogMessage": line.strip(),
+                        "CollectedAt": iso_now(),
+                        "MetricType": "SparkLog"
+                    }
+                    
+        else:
+            print(f"⚠️ Failed to get {log_type} logs: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error collecting {log_type} logs: {str(e)}")
+
+
+def collect_spark_metrics(
+    workspace_id: str,
+    session_id: str,
+    application_id: str
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Spark metrics using open-source Spark History Server APIs
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        session_id: Spark session ID
+        application_id: Spark application ID
+        
+    Yields:
+        Dict containing Spark metrics
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        base_url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/sessions/{session_id}/applications/{application_id}"
+        
+        # Collect various metrics
+        metrics_endpoints = {
+            "application": f"{base_url}",
+            "jobs": f"{base_url}/jobs",
+            "stages": f"{base_url}/stages",
+            "executors": f"{base_url}/executors",
+            "storage": f"{base_url}/storage/rdd"
+        }
+        
+        print(f"🔍 Collecting Spark metrics for application {application_id}")
+        
+        for metric_type, url in metrics_endpoints.items():
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if metric_type == "application":
+                        # Application-level metrics
+                        yield {
+                            "WorkspaceId": workspace_id,
+                            "SessionId": session_id,
+                            "ApplicationId": application_id,
+                            "MetricCategory": "Application",
+                            "AppName": data.get('name'),
+                            "Duration": data.get('duration'),
+                            "StartTime": data.get('startTime'),
+                            "EndTime": data.get('endTime'),
+                            "SparkUser": data.get('sparkUser'),
+                            "Completed": data.get('completed', False),
+                            "CollectedAt": iso_now(),
+                            "MetricType": "SparkMetric"
+                        }
+                        
+                    elif metric_type == "executors":
+                        # Executor metrics
+                        if isinstance(data, list):
+                            for executor in data:
+                                yield {
+                                    "WorkspaceId": workspace_id,
+                                    "SessionId": session_id,
+                                    "ApplicationId": application_id,
+                                    "MetricCategory": "Executor",
+                                    "ExecutorId": executor.get('id'),
+                                    "HostPort": executor.get('hostPort'),
+                                    "IsActive": executor.get('isActive'),
+                                    "RddBlocks": executor.get('rddBlocks'),
+                                    "MemoryUsed": executor.get('memoryUsed'),
+                                    "DiskUsed": executor.get('diskUsed'),
+                                    "TotalCores": executor.get('totalCores'),
+                                    "MaxTasks": executor.get('maxTasks'),
+                                    "ActiveTasks": executor.get('activeTasks'),
+                                    "FailedTasks": executor.get('failedTasks'),
+                                    "CompletedTasks": executor.get('completedTasks'),
+                                    "TotalTasks": executor.get('totalTasks'),
+                                    "CollectedAt": iso_now(),
+                                    "MetricType": "SparkMetric"
+                                }
+                        
+                    elif metric_type == "jobs":
+                        # Job metrics
+                        if isinstance(data, list):
+                            for job in data:
+                                yield {
+                                    "WorkspaceId": workspace_id,
+                                    "SessionId": session_id,
+                                    "ApplicationId": application_id,
+                                    "MetricCategory": "Job",
+                                    "JobId": job.get('jobId'),
+                                    "Name": job.get('name'),
+                                    "Status": job.get('status'),
+                                    "SubmissionTime": job.get('submissionTime'),
+                                    "CompletionTime": job.get('completionTime'),
+                                    "NumTasks": job.get('numTasks'),
+                                    "NumActiveTasks": job.get('numActiveTasks'),
+                                    "NumCompletedTasks": job.get('numCompletedTasks'),
+                                    "NumSkippedTasks": job.get('numSkippedTasks'),
+                                    "NumFailedTasks": job.get('numFailedTasks'),
+                                    "CollectedAt": iso_now(),
+                                    "MetricType": "SparkMetric"
+                                }
+                                
+                else:
+                    print(f"⚠️ Failed to get {metric_type} metrics: {response.status_code}")
+                    
+            except Exception as e:
+                print(f"⚠️ Error collecting {metric_type} metrics: {str(e)}")
+                continue
+                
+        print(f"✅ Collected Spark metrics for application {application_id}")
+        
+    except Exception as e:
+        print(f"❌ Error collecting Spark metrics: {str(e)}")
+
+
+def get_spark_session_details(
+    workspace_id: str, 
+    session_id: str, 
+    headers: Dict[str, str],
+    item_type: Optional[str] = None,
+    item_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Get detailed information for a specific Spark session
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        session_id: Spark session ID
+        headers: HTTP headers with authorization
+        item_type: Optional item type for item-specific endpoints
+        item_id: Optional item ID for item-specific endpoints
+        
+    Returns:
+        Dict containing session details
+    """
+    try:
+        if item_type and item_id:
+            # Use item-specific endpoint
+            endpoint_map = {
+                "notebook": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/notebooks/{item_id}/spark/sessions/{session_id}",
+                "sparkjobdefinition": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/sparkJobDefinitions/{item_id}/spark/sessions/{session_id}",
+                "lakehouse": f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/lakehouses/{item_id}/spark/sessions/{session_id}"
+            }
+            url = endpoint_map.get(item_type.lower())
+        else:
+            # Use workspace-level endpoint
+            url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/sessions/{session_id}"
+            
+        if not url:
+            return {}
+            
+        response = requests.get(url, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"⚠️ Failed to get session details for {session_id}: {response.status_code}")
+            return {}
+            
+    except Exception as e:
+        print(f"⚠️ Error getting session details for {session_id}: {str(e)}")
+        return {}
