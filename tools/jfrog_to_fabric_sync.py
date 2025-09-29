@@ -74,7 +74,7 @@ class MirrorState:
                 with open(path, "r", encoding="utf-8") as f:
                     self._data = json.load(f)
             except Exception:
-                safe_print("⚠️ Could not read existing state file; starting fresh")
+                safe_print("WARNING: Could not read existing state file; starting fresh")
                 self._data = {}
 
     def save(self) -> None:
@@ -108,7 +108,7 @@ def artifactory_list(repo_base: str, repo: str, session: requests.Session) -> It
     base = repo_base.rstrip("/")
     api_url = f"{base}/api/storage/{repo}"
     params = {"list": "1", "deep": "1", "listFolders": "0"}
-    safe_print(f"📡 Listing Artifactory repo {repo} via {api_url}")
+    safe_print(f"INFO: Listing Artifactory repo {repo} via {api_url}")
     r = session.get(api_url, params=params, timeout=30)
     r.raise_for_status()
     data = r.json()
@@ -118,7 +118,7 @@ def artifactory_list(repo_base: str, repo: str, session: requests.Session) -> It
 
 def pypi_simple_list(base: str, pkg_name: str, session: requests.Session) -> List[str]:
     idx = base.rstrip("/") + f"/simple/{pkg_name}/"
-    safe_print(f"📡 Fetching simple index {idx}")
+    safe_print(f"INFO: Fetching simple index {idx}")
     r = session.get(idx, timeout=30)
     r.raise_for_status()
     html = r.text
@@ -147,7 +147,7 @@ def download_url_to_path(session: requests.Session, url: str, dest_path: str, ma
                 shutil.move(tmp, dest_path)
             return
         except Exception as e:
-            safe_print(f"⚠️ Download attempt {attempts}/{max_retries} failed for {url}: {e}")
+            safe_print(f"WARNING: Download attempt {attempts}/{max_retries} failed for {url}: {e}")
             if attempts >= max_retries:
                 raise
             time.sleep(2 ** (attempts - 1))
@@ -166,7 +166,7 @@ def mirror_package_from_jfrog(pkg_name: str, jfrog_base: str, repo: str, session
                              cache_dir: str, state: MirrorState, fabric_mgr: FabricEnvironmentManager,
                              upload_wheels_only: bool = True, publish_after: bool = False) -> None:
     os.makedirs(cache_dir, exist_ok=True)
-    safe_print(f"🔎 Mirroring package: {pkg_name}")
+    safe_print(f"INFO: Mirroring package: {pkg_name}")
 
     entries: List[Dict[str, str]] = []
     # Try simple index first
@@ -176,16 +176,16 @@ def mirror_package_from_jfrog(pkg_name: str, jfrog_base: str, repo: str, session
             fname = os.path.basename(u.split('?')[0])
             entries.append({"url": u, "filename": fname})
     except Exception:
-        safe_print("⚠️ Simple index fetch failed, falling back to Artifactory storage API")
+        safe_print("WARNING: Simple index fetch failed, falling back to Artifactory storage API")
         for entry in artifactory_list(jfrog_base, repo, session):
             info = determine_files_from_artifactory_entry(jfrog_base, repo, entry)
             if info:
                 entries.append(info)
 
-    safe_print(f"ℹ️ Found {len(entries)} items for {pkg_name}")
+    safe_print(f"INFO: Found {len(entries)} items for {pkg_name}")
     entries = [e for e in entries if e["filename"].lower().endswith(VALID_DISTS)]
     if not entries:
-        safe_print("⚠️ No distribution files found; skipping")
+        safe_print("WARNING: No distribution files found; skipping")
         return
 
     for e in entries:
@@ -194,43 +194,42 @@ def mirror_package_from_jfrog(pkg_name: str, jfrog_base: str, repo: str, session
         local_path = os.path.join(cache_dir, filename)
 
         if not os.path.exists(local_path):
-            safe_print(f"⬇️ Downloading {filename} from {url}")
+            safe_print(f"Downloading {filename} from {url}")
             try:
                 download_url_to_path(session, url, local_path)
             except Exception as ex:
-                safe_print(f"❌ Failed to download {url}: {ex}")
+                safe_print(f"ERROR: Failed to download {url}: {ex}")
                 continue
 
         sha256 = sha256_of_file(local_path)
         if state.is_uploaded(pkg_name, filename, sha256):
-            safe_print(f"✅ Already uploaded {filename}, skipping")
+            safe_print(f"INFO: Already uploaded {filename}, skipping")
             continue
 
         if upload_wheels_only and not filename.lower().endswith('.whl'):
-            safe_print(f"ℹ️ Skipping non-wheel {filename} (enable sdist handling if needed)")
+            safe_print(f"INFO: Skipping non-wheel {filename} (enable sdist handling if needed)")
             continue
-
-        safe_print(f"⬆️ Uploading {filename} to Fabric (workspace={fabric_mgr.workspace_id})")
+        safe_print(f"Uploading {filename} to Fabric (workspace={fabric_mgr.workspace_id})")
         try:
             upload_result = fabric_mgr.upload_wheel(local_path, max_retries=3)
             if upload_result.get("success"):
                 state.mark_uploaded(pkg_name, filename, sha256, upload_result)
-                safe_print(f"✅ Uploaded and recorded: {filename}")
+                safe_print(f"INFO: Uploaded and recorded: {filename}")
             else:
-                safe_print(f"❌ Upload failed for {filename}: {upload_result.get('error')}")
+                safe_print(f"ERROR: Upload failed for {filename}: {upload_result.get('error')}")
         except Exception as ex:
-            safe_print(f"❌ Exception during upload of {filename}: {ex}")
+            safe_print(f"ERROR: Exception during upload of {filename}: {ex}")
 
     if publish_after:
-        safe_print("🔄 Publishing environment after uploads")
+        safe_print("INFO: Publishing environment after uploads")
         try:
             pub = fabric_mgr.publish_environment()
             if pub.get("success"):
-                safe_print("✅ Publish OK")
+                safe_print("INFO: Publish succeeded")
             else:
-                safe_print(f"⚠️ Publish returned error: {pub.get('error')}")
+                safe_print(f"WARNING: Publish returned error: {pub.get('error')}")
         except Exception as e:
-            safe_print(f"❌ Publish failed: {e}")
+            safe_print(f"ERROR: Publish failed: {e}")
 
 
 def build_jfrog_session(api_key: Optional[str], username: Optional[str], password: Optional[str]) -> requests.Session:
@@ -263,7 +262,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     if FabricEnvironmentManager is None:
-        safe_print("❌ Could not import FabricEnvironmentManager from tools/upload_wheel_to_fabric.py. Ensure you run this from the repo root and the file exists.")
+        safe_print("ERROR: Could not import FabricEnvironmentManager from tools/upload_wheel_to_fabric.py. Ensure you run this from the repo root and the file exists.")
         sys.exit(2)
 
     session = build_jfrog_session(args.jfrog_api_key, args.jfrog_user, args.jfrog_pass)
@@ -288,14 +287,14 @@ def main(argv: Optional[List[str]] = None) -> None:
         with open(args.package_list_file, "r", encoding="utf-8") as f:
             pkg_iter = [ln.strip() for ln in f if ln.strip()]
     else:
-        safe_print("❌ No package source provided. Use --package-name or --package-list-file.")
+        safe_print("ERROR: No package source provided. Use --package-name or --package-list-file.")
         sys.exit(2)
 
     for pkg in pkg_iter:
-        safe_print(f"➡️ Processing package {pkg}")
+        safe_print(f"Processing package {pkg}")
         mirror_package_from_jfrog(pkg, args.jfrog_base, args.repo, session, cache_dir, state, fabric_mgr, upload_wheels_only=args.upload_wheels_only, publish_after=args.publish)
 
-    safe_print("🎯 Mirror run complete")
+    safe_print("Mirror run complete")
 
 
 if __name__ == "__main__":

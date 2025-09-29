@@ -97,10 +97,11 @@ az login --tenant your-tenant-id
 ```
 
 **Benefits:**
-- ✅ No secrets to manage
-- ✅ Automatic token refresh
-- ✅ Works with MFA
-- ✅ Respects Azure CLI configuration
+
+- No secrets to manage
+- Automatic token refresh
+- Works with MFA
+- Respects Azure CLI configuration
 
 **Use Case:** Local development, testing
 
@@ -118,10 +119,11 @@ python upload_wheel_to_fabric.py --app-id YOUR_ID --app-secret YOUR_SECRET --ten
 ```
 
 **Benefits:**
-- ✅ Programmatic authentication
-- ✅ No interactive login required
-- ✅ Perfect for automation
-- ✅ Granular permissions control
+
+- Programmatic authentication
+- No interactive login required
+- Perfect for automation
+- Granular permissions control
 
 **Use Case:** CI/CD pipelines, automation scripts
 
@@ -134,13 +136,14 @@ python upload_wheel_to_fabric.py --bearer-token "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI
 ```
 
 **Benefits:**
-- ✅ Works when other methods fail
-- ✅ Direct token control
-- ✅ Useful for debugging
+
+- Works when other methods fail
+- Direct token control
+- Useful for debugging
 
 **Use Case:** Troubleshooting, one-off operations
 
-## 📦 Deployment Strategy Guide
+## Deployment Strategy Guide
 
 ### **Staging Workflow (Recommended for Production)**
 
@@ -158,10 +161,11 @@ python upload_wheel_to_fabric.py --wheel-path dist/your-package.whl --workspace-
 ```
 
 **Benefits:**
-- ✅ Review before activation
-- ✅ Test in staging environment
-- ✅ Rollback capability
-- ✅ Security validation
+
+- Review before activation
+- Test in staging environment
+- Rollback capability
+- Security validation
 
 ### **Auto-Publish Workflow (Recommended for Development)**
 
@@ -171,11 +175,12 @@ python upload_wheel_to_fabric.py --wheel-path dist/your-package.whl --workspace-
 ```
 
 **Benefits:**
-- ✅ Faster iteration cycle
-- ✅ Single command deployment
-- ✅ Immediate testing capability
 
-**Caution:** ⚠️ No review step - use carefully in production
+- Faster iteration cycle
+- Single command deployment
+- Immediate testing capability
+
+**Caution:** No review step - use carefully in production
 
 ## 🧪 Testing Workflows
 
