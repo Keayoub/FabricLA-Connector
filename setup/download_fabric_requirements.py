@@ -21,10 +21,10 @@ def download_fabric_runtime_yaml(runtime_version: str) -> Optional[Dict]:
         url = "https://raw.githubusercontent.com/microsoft/synapse-spark-runtime/main/Fabric/Runtime%201.3%20(Spark%203.5)/Fabric-Python311-CPU.yml"
         python_version = "3.11"
     else:
-        print(f"❌ Unsupported runtime version: {runtime_version}")
+        print(f"Unsupported runtime version: {runtime_version}")
         return None
     
-    print(f"🔄 Downloading Fabric Runtime {runtime_version} (Python {python_version}) from Microsoft repository...")
+    print(f"Downloading Fabric Runtime {runtime_version} (Python {python_version}) from Microsoft repository...")
     
     try:
         response = requests.get(url, timeout=30)
@@ -32,14 +32,14 @@ def download_fabric_runtime_yaml(runtime_version: str) -> Optional[Dict]:
         
         # Parse YAML content
         yaml_content = yaml.safe_load(response.text)
-        print(f"✅ Successfully downloaded runtime specifications")
+        print(f"Successfully downloaded runtime specifications")
         return yaml_content
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ Failed to download from {url}: {e}")
+        print(f"Failed to download from {url}: {e}")
         return None
     except yaml.YAMLError as e:
-        print(f"❌ Failed to parse YAML content: {e}")
+        print(f"Failed to parse YAML content: {e}")
         return None
 
 def extract_pip_packages(yaml_content: Dict) -> List[str]:
@@ -169,7 +169,7 @@ def create_requirements_file(runtime_version: str, pip_packages: List[str], cond
 
 def main():
     """Main function to download and create requirements files."""
-    print("🚀 Fabric Requirements Downloader")
+    print("Fabric Requirements Downloader")
     print("=" * 50)
     
     # Ask user for runtime version
@@ -177,19 +177,19 @@ def main():
         runtime_choice = input("Select Fabric Runtime version (1.2 or 1.3): ").strip()
         if runtime_choice in ["1.2", "1.3"]:
             break
-        print("❌ Please enter '1.2' or '1.3'")
+        print("Please enter '1.2' or '1.3'")
     
     # Download YAML content
     yaml_content = download_fabric_runtime_yaml(runtime_choice)
     if not yaml_content:
-        print("❌ Failed to download runtime specifications")
+        print("Failed to download runtime specifications")
         return False
     
     # Extract packages
     pip_packages = extract_pip_packages(yaml_content)
     conda_packages = extract_conda_packages(yaml_content)
     
-    print(f"📦 Found {len(pip_packages)} pip packages and {len(conda_packages)} conda packages")
+    print(f"Found {len(pip_packages)} pip packages and {len(conda_packages)} conda packages")
     
     # Filter relevant packages
     filtered_pip = filter_azure_packages(pip_packages)
@@ -205,21 +205,21 @@ def main():
     try:
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(requirements_content)
-        print(f"✅ Created {filename}")
+        print(f"Created {filename}")
         
         # Also create a generic requirements.txt if it doesn't exist
         if not Path("requirements.txt").exists():
             with open("requirements.txt", 'w', encoding='utf-8') as f:
                 f.write(requirements_content)
-            print(f"✅ Created requirements.txt")
+            print(f"Created requirements.txt")
         
-        print(f"\n📋 Requirements file created with {len(filtered_pip + filtered_conda)} packages")
-        print(f"📍 File location: {Path(filename).absolute()}")
+        print(f"\nRequirements file created with {len(filtered_pip + filtered_conda)} packages")
+        print(f"File location: {Path(filename).absolute()}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Failed to save requirements file: {e}")
+        print(f"Failed to save requirements file: {e}")
         return False
 
 if __name__ == "__main__":

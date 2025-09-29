@@ -20,17 +20,17 @@ set /p runtime_choice="Enter your choice (1 or 2): "
 if "!runtime_choice!"=="1" (
     set FABRIC_RUNTIME=1.2
     set REQUIREMENTS_FILE=requirements-fabric-1.2.txt
-    set ENV_NAME=.fabric-env-1.2
+    set ENV_NAME=..\.fabric-env-1.2
     echo Selected Fabric Runtime 1.2
-    echo Note: Environment will be created as .fabric-env-1.2
+    echo Note: Environment will be created as ..\.fabric-env-1.2
     goto continue_setup
 )
 if "!runtime_choice!"=="2" (
     set FABRIC_RUNTIME=1.3
     set REQUIREMENTS_FILE=requirements-fabric-1.3.txt
-    set ENV_NAME=.fabric-env-1.3
+    set ENV_NAME=..\.fabric-env-1.3
     echo Selected Fabric Runtime 1.3
-    echo Note: Environment will be created as .fabric-env-1.3
+    echo Note: Environment will be created as ..\.fabric-env-1.3
     goto continue_setup
 )
 echo Invalid choice. Please run the script again and select 1 or 2.
@@ -106,9 +106,9 @@ echo Installing packages for Fabric Runtime !FABRIC_RUNTIME!...
 if exist !REQUIREMENTS_FILE! (
     echo Installing from !REQUIREMENTS_FILE!
     pip install -r !REQUIREMENTS_FILE!
-) else if exist requirements.txt (
-    echo Installing from requirements.txt ^(fallback^)
-    pip install -r requirements.txt
+) else if exist ..\requirements.txt (
+    echo Installing from ..\requirements.txt ^(fallback^)
+    pip install -r ..\requirements.txt
 ) else (
     echo Installing basic packages (fallback)
     pip install azure-identity azure-keyvault-secrets azure-monitor-ingestion msal requests pandas jupyter rich
@@ -121,7 +121,7 @@ if errorlevel 1 (
 )
 
 REM Create .env.example if it doesn't exist
-if not exist .env.example (
+if not exist ..\.env.example (
     echo Creating .env.example file...
     (
         echo # Azure and Fabric Environment Variables
@@ -144,7 +144,7 @@ if not exist .env.example (
         echo LOG_ANALYTICS_WORKSPACE_ID=your-log-analytics-workspace-id
         echo DCR_ENDPOINT_HOST=your-dce-endpoint.region.ingest.monitor.azure.com
         echo DCR_IMMUTABLE_ID=dcr-your-dcr-id-here
-    ) > .env.example
+    ) > ..\.env.example
 )
 
 echo.

@@ -47,6 +47,27 @@ export FABRIC_APP_SECRET="your-app-secret"
 export FABRIC_TENANT_ID="your-tenant-id"
 ```
 
+### **🔧 Fabric Runtime Environment Setup**
+
+For development environments that need to match Microsoft Fabric runtime specifications exactly, use the automated setup scripts:
+
+```bash
+# Create Fabric-compatible Python environment
+cd setup
+python setup_fabric_environment.py
+
+# Or use Windows batch script
+setup_fabric_environment.bat
+```
+
+These scripts automatically:
+- Download official requirements from Microsoft Synapse Spark Runtime repository
+- Create version-specific virtual environments (Runtime 1.2/1.3)
+- Configure environment variables template
+- Support both Python 3.10 (Fabric 1.2) and Python 3.11 (Fabric 1.3)
+
+See [setup/README.md](setup/README.md) for detailed documentation.
+
 ## 📊 What This Framework Monitors
 
 | **Data Source** | **Information Collected** | **Custom Table** |
