@@ -438,7 +438,7 @@ requirements-fabric-1.2.txt
 requirements-fabric-1.3.txt
 MANIFEST.in
 my-package-payload/
-
+tmp_deps/
 
 # Python build artifacts
 build/
