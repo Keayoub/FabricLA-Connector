@@ -2,33 +2,41 @@
 """
 Fabric Environment Upload Tool
 
-This script uploads a Python wheel (.whl) file to a Fabric Environment
-with retry logic, debugging, and optional publishing.
+This script uploads a package file (wheel, sdist, egg, zip, etc.) to a Fabric
+Environment's staging libraries and optionally publishes the environment.
 
-Features:
-- Retry logic for transient failures with exponential backoff
-- Detailed error logging and debugging information  
-- Environment validation and graceful error handling
-- Optional immediate publishing after upload
+Key behaviors:
+- Supported file types: any file type accepted by Fabric (we set the multipart
+    Content-Type using Python's mimetypes.guess_type). Typical uses are .whl,
+    .tar.gz (sdist), .zip, and eggs.
+- Authentication precedence (highest -> lowest):
+        1) --token (explicit bearer token)
+        2) Service principal via --client-id/--client-secret/--tenant-id
+        3) DefaultAzureCredential when requested via --use-default-credential
+             (uses Azure CLI, Managed Identity, or environment credentials)
 
-Usage:
-    # Upload to staging only with default retry (3 attempts)
-    python tools/upload_wheel_to_fabric.py \
-        --workspace-id YOUR_WORKSPACE_ID \
-        --environment-id YOUR_ENV_ID \
-        --file dist/fabricla_connector-1.0.0-py3-none-any.whl
+Behavioral details:
+- Retries with exponential backoff on transient failures (configurable via
+    --retries).
+- Uploads to the Fabric staging libraries endpoint. If --publish is provided,
+    the tool will attempt to publish the environment after a successful upload.
+- Exit codes: 0 on success (upload and optional publish); non-zero when upload
+    or publish fails.
 
-    # Upload and publish immediately with custom retry count
-    python tools/upload_wheel_to_fabric.py \
-        --workspace-id YOUR_WORKSPACE_ID \
-        --environment-id YOUR_ENV_ID \
-        --file dist/fabricla_connector-1.0.0-py3-none-any.whl \
-        --publish --retries 5
+Dependencies:
+- requests (required)
+- azure-identity (only required when using service principal or
+    DefaultAzureCredential)
 
-Authentication options:
-    --token BEARER_TOKEN                    # Bearer token
-    --client-id ID --client-secret SECRET   # Service principal
-    # Or use DefaultAzureCredential (az login)
+Examples:
+        # Upload with bearer token
+        python tools/upload_wheel_to_fabric.py --workspace-id <ws> --environment-id <env> --file dist/pkg.whl --token <bearer>
+
+        # Upload using DefaultAzureCredential (requires --use-default-credential)
+        python tools/upload_wheel_to_fabric.py --workspace-id <ws> --environment-id <env> --file dist/pkg.whl --use-default-credential
+
+        # Upload using service principal
+        python tools/upload_wheel_to_fabric.py --workspace-id <ws> --environment-id <env> --file dist/pkg.whl --client-id <id> --client-secret <secret> --tenant-id <tenant>
 """
 
 import argparse
@@ -57,6 +65,8 @@ try:
     from azure.identity import DefaultAzureCredential, ClientSecretCredential
     AZURE_IDENTITY_AVAILABLE = True
 except ImportError:
+    DefaultAzureCredential = None
+    ClientSecretCredential = None
     AZURE_IDENTITY_AVAILABLE = False
 
 class FabricEnvironmentManager:
@@ -64,12 +74,14 @@ class FabricEnvironmentManager:
     
     def __init__(self, workspace_id: str, environment_id: str, 
                  token: Optional[str] = None, client_id: Optional[str] = None, 
-                 client_secret: Optional[str] = None, tenant_id: Optional[str] = None):
+                 client_secret: Optional[str] = None, tenant_id: Optional[str] = None,
+                 use_default_credential: bool = False):
         self.workspace_id = workspace_id
         self.environment_id = environment_id
         self.base_url = "https://api.fabric.microsoft.com/v1"
         
         # Authentication
+        self.use_default_credential = use_default_credential
         self.token = self._get_token(token, client_id, client_secret, tenant_id)
         
         # Setup session
@@ -90,7 +102,7 @@ class FabricEnvironmentManager:
         if client_id and client_secret and tenant_id:
             if not AZURE_IDENTITY_AVAILABLE:
                 raise Exception("azure-identity package required for service principal auth")
-            
+
             safe_print("🔑 Using service principal authentication")
             credential = ClientSecretCredential(
                 tenant_id=tenant_id,
@@ -98,8 +110,11 @@ class FabricEnvironmentManager:
                 client_secret=client_secret
             )
             return credential.get_token("https://api.fabric.microsoft.com/.default").token
-        
-        if AZURE_IDENTITY_AVAILABLE:
+
+        if self.use_default_credential:
+            if not AZURE_IDENTITY_AVAILABLE:
+                raise Exception("azure-identity package required for DefaultAzureCredential")
+
             safe_print("🔑 Using DefaultAzureCredential (Azure CLI)")
             credential = DefaultAzureCredential()
             return credential.get_token("https://api.fabric.microsoft.com/.default").token
@@ -154,11 +169,13 @@ class FabricEnvironmentManager:
     def _attempt_upload(self, wheel_path: str, wheel_name: str) -> Dict[str, Any]:
         """Single upload attempt."""
         url = f"{self.base_url}/workspaces/{self.workspace_id}/environments/{self.environment_id}/staging/libraries"
-        
+        import mimetypes
+
         # Create proper multipart form data
+        content_type = mimetypes.guess_type(wheel_path)[0] or 'application/octet-stream'
         with open(wheel_path, 'rb') as f:
             files = {
-                'file': (wheel_name, f, 'application/octet-stream')
+                'file': (wheel_name, f, content_type)
             }
             
             # Create new headers without Content-Type (requests will set it automatically for multipart)
@@ -294,10 +311,10 @@ class FabricEnvironmentManager:
         }
 
 def main():
-    parser = argparse.ArgumentParser(description='Upload wheel to Fabric Environment with optional publish and retry logic')
+    parser = argparse.ArgumentParser(description='Upload packages (whl, sdist, etc.) to Fabric Environment with optional publish and retry logic')
     parser.add_argument('--workspace-id', required=True, help='Fabric workspace ID')
     parser.add_argument('--environment-id', required=True, help='Fabric environment ID')
-    parser.add_argument('--file', required=True, help='Path to wheel file')
+    parser.add_argument('--file', required=True, help='Path to package file')
     parser.add_argument('--publish', action='store_true', help='Publish environment after upload')
     parser.add_argument('--retries', type=int, default=3, help='Number of retry attempts (default: 3)')
     
@@ -306,6 +323,7 @@ def main():
     parser.add_argument('--client-id', help='Service principal client ID')
     parser.add_argument('--client-secret', help='Service principal client secret')
     parser.add_argument('--tenant-id', help='Azure tenant ID')
+    parser.add_argument('--use-default-credential', action='store_true', help='Use DefaultAzureCredential when available')
     
     args = parser.parse_args()
     
@@ -317,7 +335,8 @@ def main():
             token=args.token,
             client_id=args.client_id,
             client_secret=args.client_secret,
-            tenant_id=args.tenant_id
+            tenant_id=args.tenant_id,
+            use_default_credential=args.use_default_credential
         )
         
         # Upload wheel
