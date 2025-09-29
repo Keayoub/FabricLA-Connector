@@ -33,22 +33,22 @@ class Colors:
 
 def print_step(step: str, description: str = ""):
     """Print a step with formatting."""
-    print(f"{Colors.BLUE}{Colors.BOLD}🔨 {step}{Colors.END}")
+    print(f"{Colors.BLUE}{Colors.BOLD}{step}{Colors.END}")
     if description:
         print(f"   {description}")
     print()
 
 def print_success(message: str):
     """Print success message."""
-    print(f"{Colors.GREEN}✅ {message}{Colors.END}")
+    print(f"{Colors.GREEN}[OK] {message}{Colors.END}")
 
 def print_warning(message: str):
     """Print warning message."""
-    print(f"{Colors.YELLOW}⚠️  {message}{Colors.END}")
+    print(f"{Colors.YELLOW}[WARN] {message}{Colors.END}")
 
 def print_error(message: str):
     """Print error message."""
-    print(f"{Colors.RED}❌ {message}{Colors.END}")
+    print(f"{Colors.RED}[ERROR] {message}{Colors.END}")
 
 def check_prerequisites() -> bool:
     """Check if all prerequisites are installed."""
@@ -227,9 +227,9 @@ def upload_to_fabric(wheel_path: Path, workspace_id: str, environment_id: str,
     # Add publish flag if requested
     if publish:
         cmd.append("--publish")
-        print("   🚀 Auto-publish enabled - package will be immediately active")
+        print("   Auto-publish enabled - package will be immediately active")
     else:
-        print("   📦 Upload to staging only - manual publish required")
+        print("   Upload to staging only - manual publish required")
     
     # Add authentication arguments
     if token:
@@ -243,7 +243,9 @@ def upload_to_fabric(wheel_path: Path, workspace_id: str, environment_id: str,
         ])
         print("   Using service principal authentication")
     else:
-        print("   Using DefaultAzureCredential authentication")
+        # When no explicit auth provided, request the uploader to use DefaultAzureCredential
+        cmd.append("--use-default-credential")
+        print("   Using DefaultAzureCredential authentication (will pass --use-default-credential to uploader)")
     
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)

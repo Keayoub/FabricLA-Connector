@@ -101,10 +101,15 @@ class FabricEnvironmentManager:
         
         if client_id and client_secret and tenant_id:
             if not AZURE_IDENTITY_AVAILABLE:
-                raise Exception("azure-identity package required for service principal auth")
+                raise Exception(
+                    "Service principal authentication requires the 'azure-identity' package. "
+                    "Install it in your environment with: pip install azure-identity"
+                )
 
-            safe_print("🔑 Using service principal authentication")
-            credential = ClientSecretCredential(
+            safe_print("Using service principal authentication")
+            # Construct credential at runtime to avoid static import issues when azure-identity is not installed
+            from azure.identity import ClientSecretCredential as _ClientSecretCredential
+            credential = _ClientSecretCredential(
                 tenant_id=tenant_id,
                 client_id=client_id,
                 client_secret=client_secret
@@ -113,13 +118,20 @@ class FabricEnvironmentManager:
 
         if self.use_default_credential:
             if not AZURE_IDENTITY_AVAILABLE:
-                raise Exception("azure-identity package required for DefaultAzureCredential")
+                raise Exception(
+                    "DefaultAzureCredential requires the 'azure-identity' package. "
+                    "Install it with: pip install azure-identity and ensure you have a valid login (az login) or managed identity."
+                )
 
-            safe_print("🔑 Using DefaultAzureCredential (Azure CLI)")
-            credential = DefaultAzureCredential()
+            safe_print("Using DefaultAzureCredential (Azure CLI / Managed Identity / Environment)")
+            from azure.identity import DefaultAzureCredential as _DefaultAzureCredential
+            credential = _DefaultAzureCredential()
             return credential.get_token("https://api.fabric.microsoft.com/.default").token
         
-        raise Exception("No authentication method available. Provide token or install azure-identity")
+        raise Exception(
+            "No authentication method available. Provide --token, or supply service principal credentials "
+            "(--client-id, --client-secret, --tenant-id), or install 'azure-identity' and use --use-default-credential."
+        )
     
     def upload_wheel(self, wheel_path: str, max_retries: int = 3) -> Dict[str, Any]:
         """Upload wheel file to staging libraries with retry logic."""
