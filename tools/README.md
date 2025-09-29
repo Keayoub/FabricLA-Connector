@@ -240,51 +240,152 @@ ls -la dist/
 # Verify workspace/environment IDs
 # Use Fabric portal URLs to confirm GUIDs
 
-# Test with minimal wheel
-python upload_wheel_to_fabric.py --wheel-path dist/simple-package.whl [args] --publish
+# Tools Documentation - FabricLA-Connector
+
+This directory contains small developer utilities used to build, test, and
+upload the package to a Microsoft Fabric environment.
+
+The main tools documented here:
+
+- `upload_wheel_to_fabric.py` — upload a package file to Fabric staging and
+  optionally publish the environment.
+- `upload_wheel_to_blob.py` — upload a package file to Azure Blob Storage (adds
+  optional SAS generation).
+- `test_local_build.py` — local build → test → upload harness for development.
+
+## upload_wheel_to_fabric.py
+
+Purpose: upload a package file accepted by Fabric (wheels, sdists, zips, eggs)
+to a Fabric workspace environment's staging libraries, with retries and an
+optional publish step.
+
+Key points
+- Supported file types: any file type accepted by Fabric. The script uses
+  `mimetypes.guess_type()` to set the multipart Content-Type.
+- Authentication precedence (highest → lowest):
+  1. `--token` (explicit bearer token)
+  2. Service principal (`--client-id` / `--client-secret` / `--tenant-id`)
+  3. `--use-default-credential` (DefaultAzureCredential; picks up `az login`,
+     Managed Identity, or env vars)
+- Retry: exponential backoff (configurable via `--retries`).
+
+Usage examples
+
+Upload to staging:
+
+```powershell
+py tools\upload_wheel_to_fabric.py --workspace-id <WS_ID> --environment-id <ENV_ID> --file dist\your-package.whl
 ```
 
-### **Common Error Messages**
+Upload and publish immediately:
 
-- **"Unauthorized"** → Check authentication method and permissions
-- **"Environment not found"** → Verify workspace-id and environment-id
-- **"File already exists"** → Use staging workflow or increment version
-- **"Invalid wheel format"** → Check wheel build process
-
-## 📋 Command Reference
-
-### **Upload Tool Commands**
-
-```bash
-# Minimal upload to staging
-python upload_wheel_to_fabric.py --wheel-path WHEEL --workspace-id ID --environment-id ID
-
-# Auto-publish
-python upload_wheel_to_fabric.py --wheel-path WHEEL --workspace-id ID --environment-id ID --publish
-
-# With service principal
-python upload_wheel_to_fabric.py --wheel-path WHEEL --workspace-id ID --environment-id ID --app-id ID --app-secret SECRET --tenant-id ID
-
-# With bearer token
-python upload_wheel_to_fabric.py --wheel-path WHEEL --workspace-id ID --environment-id ID --bearer-token TOKEN
+```powershell
+py tools\upload_wheel_to_fabric.py --workspace-id <WS_ID> --environment-id <ENV_ID> --file dist\your-package.whl --publish
 ```
 
-### **Test Script Commands**
+Using DefaultAzureCredential (dev / az login):
 
-```bash
-# Build only
-python test_local_build.py --workspace-id ID --environment-id ID --skip-upload
-
-# Build and stage
-python test_local_build.py --workspace-id ID --environment-id ID
-
-# Build and auto-publish
-python test_local_build.py --workspace-id ID --environment-id ID --publish
-
-# With custom auth
-python test_local_build.py --workspace-id ID --environment-id ID --bearer-token TOKEN
+```powershell
+py tools\upload_wheel_to_fabric.py --workspace-id <WS_ID> --environment-id <ENV_ID> --file dist\your-package.whl --use-default-credential
 ```
+
+Using service principal:
+
+```powershell
+py tools\upload_wheel_to_fabric.py --workspace-id <WS_ID> --environment-id <ENV_ID> --file dist\your-package.whl --client-id <ID> --client-secret <SECRET> --tenant-id <TENANT>
+```
+
+Important notes
+- If you pass `--use-default-credential`, make sure `azure-identity` is
+  installed and you have logged in with `az login` or provided MI credentials.
+- For CI/CD, prefer a service principal with minimal required permissions.
+
+## upload_wheel_to_blob.py
+
+Purpose: upload a package file to Azure Blob Storage. Supports both connection
+string and credential (DefaultAzureCredential or ClientSecretCredential) auth.
+
+Key points
+- Can upload via `--connection-string` (existing behavior).
+- Can authenticate with AAD via `--account-url` + `--use-default-credential`,
+  or `--account-url` + `--client-id`/`--client-secret`/`--tenant-id`.
+- SAS generation (`--generate-sas`) requires the storage account key which is
+  typically only available in a connection string; SAS cannot be generated
+  with AAD-only credentials.
+
+Usage examples
+
+Upload with connection string (account key present):
+
+```powershell
+py tools\upload_wheel_to_blob.py --file dist\your-package.whl --container mycontainer --connection-string "DefaultEndpointsProtocol=...;AccountName=...;AccountKey=...;"
+```
+
+Upload using DefaultAzureCredential:
+
+```powershell
+py tools\upload_wheel_to_blob.py --file dist\your-package.whl --container mycontainer --account-url https://<acct>.blob.core.windows.net --use-default-credential
+```
+
+Generate SAS (only with account key in connection string):
+
+```powershell
+py tools\upload_wheel_to_blob.py --file dist\your-package.whl --container mycontainer --connection-string "...AccountKey=..." --generate-sas
+```
+
+## test_local_build.py
+
+Purpose: local convenience script to build the wheel, run a small validation
+import test, and optionally upload to Fabric (and publish).
+
+Usage highlights
+
+```powershell
+py tools\test_local_build.py --workspace-id <WS_ID> --environment-id <ENV_ID>
+# or to skip upload
+py tools\test_local_build.py --workspace-id <WS_ID> --environment-id <ENV_ID> --skip-upload
+```
+
+## Authentication and permissions
+
+- For `--use-default-credential`, install `azure-identity` and sign in with
+  `az login` (developer) or use Managed Identity in cloud hosts. The principal
+  needs write permissions to the Fabric workspace/environment (workspace
+  membership or an appropriate Fabric permission).
+- For CI, use a service principal (ClientSecretCredential) and grant only the
+  least privilege needed to upload and publish packages.
+
+## Dependencies
+
+- `requests` (required)
+- `azure-identity` (required when using AAD-based auth flows)
+- `azure-storage-blob` (required if you run `upload_wheel_to_blob.py` with
+  connection-string or SAS generation)
+
+Install (recommended in a virtualenv):
+
+```powershell
+py -m pip install -r requirements.txt
+# or install individually
+py -m pip install requests azure-identity azure-storage-blob
+```
+
+## Troubleshooting
+
+- "Unauthorized" → confirm the auth method and that the identity has Fabric
+  workspace access and the correct API permissions.
+- "Environment not found" → verify the workspace-id and environment-id GUIDs.
+- If DefaultAzureCredential fails, run `az login` locally or validate
+  environment-managed identity on the host.
+
+## Quick checklist before uploading
+
+1. Build your package into `dist/` (e.g., `python -m build --wheel`).
+2. Confirm the package file exists and is the correct version.
+3. Choose auth method (token / service principal / DefaultAzureCredential).
+4. Run the upload script and optionally `--publish` when ready.
 
 ---
 
-**💡 Need help?** Check the main [project README](../README.md) or [deployment options guide](../DEPLOYMENT_OPTIONS_GUIDE.md) for more information.
+See the main project `README.md` for higher-level onboarding and infra
+instructions.
