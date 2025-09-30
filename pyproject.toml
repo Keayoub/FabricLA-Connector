@@ -11,7 +11,7 @@ authors = [
 description = "A comprehensive framework for collecting and ingesting Microsoft Fabric monitoring data"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -31,16 +31,27 @@ classifiers = [
 ]
 keywords = ["microsoft", "fabric", "monitoring", "azure", "log-analytics", "data-collection"]
 dependencies = [
-    "msal>=1.24.0",
-    "requests>=2.31.0",
-    "azure-identity>=1.15.0",
-    "azure-keyvault-secrets>=4.7.0",
-    "azure-mgmt-monitor==7.0.0",
-    "azure-common~=1.1",
-    "azure-mgmt-core>=1.5.0",
-    "python-dotenv>=1.0.0",
-    "pandas>=2.0.0",
-    "numpy>=1.24.0"
+    "msal>=1.34.0",
+    "requests>=2.32.5",
+    "azure-core==1.30.2",
+    "azure-identity>=1.16.1",
+    "azure-keyvault-secrets>=4.8.0",
+    "azure-storage-blob==12.22.0",
+    "azure-storage-file-datalake==12.16.0",
+    "azure-datalake-store==0.0.53",
+    "azure-mgmt-monitor>=7.0.0,<8.0.0",
+    "azure-common>=1.1.28",
+    "azure-mgmt-core>=1.6.0",
+    "python-dotenv>=1.1.1",
+    # Use numpy <2 to remain compatible with common scientific stacks on shared runtimes
+    "numpy>=1.22.4,<2.0.0",
+    # pandas 2.2.x works with numpy <2; keep a narrow range to avoid pulling numpy 2.x
+    "pandas>=2.2.0,<2.3.0",
+    # Ensure filelock and PyJWT match other installed tool expectations
+    "filelock<3.12,>=3.8.0",
+    "PyJWT>=2.6.0,<3.0.0",
+    # Constrain fsspec to versions compatible with datasets 2.19.x
+    "fsspec<=2024.3.1,>=2023.1.0"
 ]
 
 [project.urls]
