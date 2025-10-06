@@ -1,8 +1,14 @@
 # Tools Documentation - FabricLA-Connector
 
-Comprehensive development and testing tools for building, testing, and uploading the FabricLA-Connector Python package to Microsoft Fabric environments.
+Comprehensive development and testing tools for building, testing, uploading to Microsoft Fabric environments, and creating Fabric items programmatically.
 
 ## 🛠️ Available Tools
+
+### Fabric Item Creation Tools
+
+- **create_fabric_pipeline.py** - Create Data Pipelines in Fabric workspaces
+- **create_fabric_warehouse.py** - Create Warehouses with configurable SKUs  
+- **create_fabric_dataflow_gen2.py** - Create Dataflow Gen2 items with Power Query M support
 
 ### 1. **upload_wheel_to_fabric.py** - Main Upload Tool
 
@@ -392,5 +398,191 @@ py -m pip install requests azure-identity azure-storage-blob
 
 ---
 
-See the main project `README.md` for higher-level onboarding and infra
-instructions.
+## 🏗️ Fabric Item Creation Tools
+
+The following tools programmatically create Fabric items via the REST API (Items endpoint: `POST /workspaces/{workspaceId}/items`). All tools support the same authentication patterns and include dry-run mode for testing.
+
+### Common Authentication (All Creation Tools)
+
+All tools support three authentication methods (in order of precedence):
+
+1. **Explicit Bearer Token** (`--token`)
+   ```cmd
+   --token eyJ0eXAiOiJKV1QiLCJhbGc...
+   ```
+
+2. **Service Principal** (`--client-id`, `--client-secret`, `--tenant-id`)
+   ```cmd
+   --client-id <app-id> --client-secret <secret> --tenant-id <tenant-guid>
+   ```
+
+3. **DefaultAzureCredential** (`--use-default-credential`)
+   - Uses Azure CLI credentials (`az login`)
+   - Falls back to Managed Identity
+   - Falls back to Environment Variables (AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID)
+
+### create_fabric_pipeline.py
+
+Create Data Pipelines programmatically in Fabric workspaces.
+
+**Basic Usage:**
+
+```cmd
+python tools\create_fabric_pipeline.py --workspace-id <workspace-guid> --pipeline-file tools\samples\sample_pipeline.json --use-default-credential
+```
+
+**Complete Options:**
+
+```cmd
+python tools\create_fabric_pipeline.py \
+  --workspace-id <workspace-guid> \
+  --pipeline-file <path-to-pipeline.json> \
+  [--use-default-credential | --token <bearer> | --client-id <id> --client-secret <secret> --tenant-id <tenant>] \
+  [--dry-run] \
+  [--discover] \
+  [--endpoint <override-api-url>]
+```
+
+**Parameters:**
+- `--workspace-id` - Target Fabric workspace ID (required)
+- `--pipeline-file` - Path to pipeline JSON definition (required)
+- `--dry-run` - Validate payload without calling API
+- `--discover` - Discover available endpoints and resources in workspace (GET only)
+- `--endpoint` - Override default API endpoint
+
+**Sample File:** `tools/samples/sample_pipeline.json`
+
+**Example:**
+
+```cmd
+# Dry-run to validate
+python tools\create_fabric_pipeline.py --workspace-id fb53fbfb-d8e9-4797-b2f5-ba80bb9a7388 --pipeline-file tools\samples\sample_pipeline.json --dry-run
+
+# Create with Azure CLI auth
+python tools\create_fabric_pipeline.py --workspace-id fb53fbfb-d8e9-4797-b2f5-ba80bb9a7388 --pipeline-file tools\samples\sample_pipeline.json --use-default-credential
+```
+
+### create_fabric_warehouse.py
+
+Create Warehouses with predefined SKU sizes or custom configurations.
+
+**Basic Usage:**
+
+```cmd
+# Create with size preset
+python tools\create_fabric_warehouse.py --workspace-id <workspace-guid> --size medium --use-default-credential
+
+# Create from custom JSON
+python tools\create_fabric_warehouse.py --workspace-id <workspace-guid> --warehouse-file my_warehouse.json --use-default-credential
+```
+
+**Complete Options:**
+
+```cmd
+python tools\create_fabric_warehouse.py \
+  --workspace-id <workspace-guid> \
+  [--size small|medium|large] \
+  [--warehouse-file <path-to-warehouse.json>] \
+  [--use-default-credential | --token <bearer> | --client-id <id> --client-secret <secret> --tenant-id <tenant>] \
+  [--dry-run] \
+  [--endpoint <override-api-url>]
+```
+
+**Parameters:**
+- `--workspace-id` - Target Fabric workspace ID (required)
+- `--size` - Predefined size: `small` (DW100c), `medium` (DW200c), `large` (DW400c)
+- `--warehouse-file` - Path to custom warehouse JSON configuration
+- `--dry-run` - Validate payload without calling API
+- `--endpoint` - Override default API endpoint
+
+**Size Mappings:**
+- `small` → DW100c (capacity: 100)
+- `medium` → DW200c (capacity: 200)
+- `large` → DW400c (capacity: 400)
+
+**Example:**
+
+```cmd
+# Create medium warehouse
+python tools\create_fabric_warehouse.py --workspace-id 8457f746-f2d9-4d27-8221-5714601e40c6 --size medium --use-default-credential
+```
+
+### create_fabric_dataflow_gen2.py
+
+Create Dataflow Gen2 items with optional Power Query M (mashup) definitions.
+
+**Basic Usage:**
+
+```cmd
+# Create simple dataflow
+python tools\create_fabric_dataflow_gen2.py --workspace-id <workspace-guid> --name "My Dataflow" --use-default-credential
+
+# Create with Power Query M file
+python tools\create_fabric_dataflow_gen2.py --workspace-id <workspace-guid> --mashup-file tools\samples\sample_mashup.pq --name "ETL Flow" --use-default-credential
+
+# Create from JSON definition
+python tools\create_fabric_dataflow_gen2.py --workspace-id <workspace-guid> --dataflow-file tools\samples\sample_dataflow.json --use-default-credential
+```
+
+**Complete Options:**
+
+```cmd
+python tools\create_fabric_dataflow_gen2.py \
+  --workspace-id <workspace-guid> \
+  [--name <display-name>] \
+  [--description <description>] \
+  [--dataflow-file <path-to-dataflow.json>] \
+  [--mashup-file <path-to-mashup.pq>] \
+  [--use-default-credential | --token <bearer> | --client-id <id> --client-secret <secret> --tenant-id <tenant>] \
+  [--dry-run] \
+  [--endpoint <override-api-url>]
+```
+
+**Parameters:**
+- `--workspace-id` - Target Fabric workspace ID (required)
+- `--name` - Display name for the dataflow
+- `--description` - Description text
+- `--dataflow-file` - Path to dataflow JSON definition
+- `--mashup-file` - Path to Power Query M (.pq) file
+- `--dry-run` - Validate payload without calling API
+- `--endpoint` - Override default API endpoint
+
+**Sample Files:**
+- `tools/samples/sample_dataflow.json` - Complete dataflow definition
+- `tools/samples/sample_mashup.pq` - Power Query M example (creates a simple table with squared numbers)
+
+**Example:**
+
+```cmd
+# Create with Power Query M
+python tools\create_fabric_dataflow_gen2.py --workspace-id 8457f746-f2d9-4d27-8221-5714601e40c6 --mashup-file tools\samples\sample_mashup.pq --name "Production ETL" --use-default-credential
+```
+
+### End-to-End Workflow Example
+
+Create a complete data processing workflow in Fabric:
+
+```cmd
+# 1. Create warehouse for storage
+python tools\create_fabric_warehouse.py --workspace-id fb53fbfb-d8e9-4797-b2f5-ba80bb9a7388 --size large --use-default-credential
+
+# 2. Create dataflow for ETL
+python tools\create_fabric_dataflow_gen2.py --workspace-id fb53fbfb-d8e9-4797-b2f5-ba80bb9a7388 --mashup-file my_etl.pq --name "Production ETL" --use-default-credential
+
+# 3. Create pipeline for orchestration
+python tools\create_fabric_pipeline.py --workspace-id fb53fbfb-d8e9-4797-b2f5-ba80bb9a7388 --pipeline-file my_pipeline.json --use-default-credential
+```
+
+### Testing with Dry-Run
+
+Validate all configurations before deployment:
+
+```cmd
+python tools\create_fabric_warehouse.py --workspace-id <ws-id> --size medium --dry-run
+python tools\create_fabric_dataflow_gen2.py --workspace-id <ws-id> --name "Test Flow" --dry-run
+python tools\create_fabric_pipeline.py --workspace-id <ws-id> --pipeline-file sample.json --dry-run
+```
+
+---
+
+See the main project `README.md` for higher-level onboarding and infra instructions.
