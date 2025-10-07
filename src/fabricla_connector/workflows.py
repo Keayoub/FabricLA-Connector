@@ -1512,6 +1512,73 @@ def collect_and_ingest_access_permissions(
     return results
 
 
+def collect_and_ingest_workspace_config(
+    workspace_id: str,
+    dce_endpoint: Optional[str] = None,
+    dcr_immutable_id: Optional[str] = None,
+    stream_name: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Collect and ingest workspace configuration including OAP (OneLake Access Point) settings.
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        dce_endpoint: Optional custom DCE endpoint
+        dcr_immutable_id: Optional custom DCR immutable ID
+        stream_name: Optional custom stream name
+        
+    Returns:
+        Dict with collection and ingestion results
+    """
+    from .collectors import AccessPermissionsCollector
+    from .ingestion import post_rows_to_dcr
+    from .config import get_ingestion_config
+    
+    results = {
+        "workspace_config": {"collected": 0, "ingested": 0},
+        "errors": []
+    }
+    
+    try:
+        print(f"🚀 Starting workspace configuration collection for workspace {workspace_id}")
+        
+        collector = AccessPermissionsCollector(workspace_id)
+        
+        # Get ingestion configuration
+        ingestion_config = get_ingestion_config()
+        if dce_endpoint:
+            ingestion_config["dce_endpoint"] = dce_endpoint
+        if dcr_immutable_id:
+            ingestion_config["dcr_immutable_id"] = dcr_immutable_id
+        if stream_name:
+            ingestion_config["stream_name"] = stream_name
+        else:
+            ingestion_config["stream_name"] = "Custom-FabricWorkspaceConfig_CL"
+        
+        # Collect workspace configuration
+        workspace_config = list(collector.collect_workspace_config())
+        results["workspace_config"]["collected"] = len(workspace_config)
+        
+        if workspace_config:
+            ingest_result = post_rows_to_dcr(
+                records=workspace_config,
+                dce_endpoint=ingestion_config["dce_endpoint"],
+                dcr_immutable_id=ingestion_config["dcr_immutable_id"],
+                stream_name=ingestion_config["stream_name"]
+            )
+            results["workspace_config"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
+        
+        print(f"✅ Workspace configuration collection completed:")
+        print(f"   Workspace config: {results['workspace_config']['collected']} collected, {results['workspace_config']['ingested']} ingested")
+        
+    except Exception as e:
+        error_msg = f"Error in workspace config collection: {str(e)}"
+        results["errors"].append(error_msg)
+        print(f"❌ {error_msg}")
+    
+    return results
+
+
 def collect_and_ingest_data_lineage(
     workspace_id: str,
     dce_endpoint: Optional[str] = None,

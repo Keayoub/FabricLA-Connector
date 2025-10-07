@@ -119,6 +119,7 @@ from .workflows import (
     run_minimal_monitoring_cycle,
     # Phase 2: Security & Governance
     collect_and_ingest_access_permissions,
+    collect_and_ingest_workspace_config,
     collect_and_ingest_data_lineage,
     collect_and_ingest_semantic_models,
     run_compliance_monitoring_cycle,

@@ -923,6 +923,85 @@ class AccessPermissionsCollector:
         self.workspace_id = workspace_id
         self.base_url = "https://api.fabric.microsoft.com/v1"
     
+    def collect_workspace_config(self) -> Iterator[Dict[str, Any]]:
+        """Collect workspace configuration including OAP (OneLake Access Point) status and settings"""
+        try:
+            token = get_fabric_token()
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json'
+            }
+            
+            # Get detailed workspace configuration (requires admin permissions)
+            url = f"{self.base_url}/admin/workspaces/{self.workspace_id}"
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                workspace_data = response.json()
+                
+                # Extract OAP and other configuration settings
+                yield {
+                    "TimeGenerated": iso_now(),
+                    "WorkspaceId": self.workspace_id,
+                    "WorkspaceName": workspace_data.get('displayName'),
+                    "WorkspaceType": workspace_data.get('type'),
+                    "State": workspace_data.get('state'),
+                    "CapacityId": workspace_data.get('capacityId'),
+                    
+                    # OneLake Access Point (OAP) Configuration
+                    "OneLakeAccessEnabled": workspace_data.get('oneLakeAccessEnabled', False),
+                    "OneLakeAccessPointEnabled": workspace_data.get('settings', {}).get('oneLakeAccessPointEnabled', False),
+                    
+                    # Data access and security settings
+                    "ReadOnlyState": workspace_data.get('settings', {}).get('readOnlyState'),
+                    "DataAccessRoles": json.dumps(workspace_data.get('settings', {}).get('dataAccessRoles', [])),
+                    "PublicInternetAccess": workspace_data.get('settings', {}).get('publicInternetAccess'),
+                    
+                    # Workspace features and capabilities
+                    "IsOnDedicatedCapacity": workspace_data.get('isOnDedicatedCapacity', False),
+                    "DefaultDataLakeStorageGen2": workspace_data.get('settings', {}).get('defaultDataLakeStorageGen2'),
+                    "ManagedVirtualNetwork": workspace_data.get('settings', {}).get('managedVirtualNetwork'),
+                    
+                    # Git integration and DevOps
+                    "GitEnabled": workspace_data.get('settings', {}).get('gitEnabled', False),
+                    "GitConnectionId": workspace_data.get('gitConnection', {}).get('gitConnectionId'),
+                    "GitRepositoryUrl": workspace_data.get('gitConnection', {}).get('repositoryUrl'),
+                    
+                    # Compliance and governance
+                    "DataClassification": workspace_data.get('dataClassification'),
+                    "SensitivityLabel": workspace_data.get('sensitivityLabel', {}).get('labelId'),
+                    "ComplianceFlags": json.dumps(workspace_data.get('complianceFlags', {})),
+                    
+                    # Metadata
+                    "CreatedDate": workspace_data.get('createdDate'),
+                    "LastModifiedDate": workspace_data.get('modifiedDate'),
+                    "Description": workspace_data.get('description', ''),
+                    "MetricType": "WorkspaceConfig"
+                }
+            elif response.status_code == 403:
+                print(f"⚠️ Workspace config collection requires admin permissions (403)")
+                # Try non-admin endpoint as fallback
+                fallback_url = f"{self.base_url}/workspaces/{self.workspace_id}"
+                fallback_response = requests.get(fallback_url, headers=headers)
+                
+                if fallback_response.status_code == 200:
+                    workspace_data = fallback_response.json()
+                    yield {
+                        "TimeGenerated": iso_now(),
+                        "WorkspaceId": self.workspace_id,
+                        "WorkspaceName": workspace_data.get('displayName'),
+                        "WorkspaceType": workspace_data.get('type'),
+                        "CapacityId": workspace_data.get('capacityId'),
+                        "Description": workspace_data.get('description', ''),
+                        "MetricType": "WorkspaceConfig",
+                        "Note": "Limited data - admin permissions required for full config"
+                    }
+            else:
+                print(f"⚠️ Failed to get workspace config: {response.status_code}")
+                
+        except Exception as e:
+            print(f"❌ Error collecting workspace config: {str(e)}")
+    
     def collect_workspace_permissions(self) -> Iterator[Dict[str, Any]]:
         """Collect workspace permissions and role assignments"""
         try:
