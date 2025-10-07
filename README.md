@@ -76,6 +76,9 @@ See [setup/README.md](setup/README.md) for detailed documentation.
 | **Dataset Refresh** | Refresh operations, duration, failure analysis | `FabricDatasetRefresh_CL`, `FabricDatasetMetadata_CL` |
 | **User Activity** | Access patterns, security events, usage analytics | `FabricUserActivity_CL` |
 | **Capacity Metrics** | Resource utilization, workload distribution | `FabricCapacityMetrics_CL`, `FabricCapacityWorkloads_CL` |
+| **🆕 Workspace Configuration** | OAP settings, security policies, Git integration, compliance | `FabricWorkspaceConfig_CL` |
+| **Spark Execution** | Spark applications, logs, metrics, network traffic | `FabricSparkApplications_CL`, `FabricSparkLogs_CL` |
+| **Access Permissions** | User roles, item permissions, capacity assignments | `FabricPermissions_CL` |
 
 ## 🔧 Technical Positioning: Complementary Monitoring Architecture
 
