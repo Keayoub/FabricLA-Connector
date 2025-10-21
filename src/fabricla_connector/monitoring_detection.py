@@ -378,36 +378,36 @@ def print_monitoring_status(workspace_monitoring_status: Dict[str, Any],
     """Print a comprehensive monitoring status report."""
     
     print("\n" + "="*80)
-    print("🔍 FABRIC MONITORING INTELLIGENCE REPORT")
+    print("INFO: Collecting FABRIC MONITORING INTELLIGENCE REPORT")
     print("="*80)
     
     # Workspace monitoring status
     monitoring_enabled = workspace_monitoring_status.get("workspace_monitoring_enabled")
     detection_method = workspace_monitoring_status.get("detection_method", "unknown")
     
-    print(f"\n📊 Workspace Monitoring Status:")
+    print(f"\nFound Workspace Monitoring Status:")
     if monitoring_enabled is True:
-        print(f"   ✅ ENABLED (detected via {detection_method})")
+        print(f"   SUCCESS: ENABLED (detected via {detection_method})")
         eventhouse_id = workspace_monitoring_status.get("eventhouse_id")
         if eventhouse_id:
-            print(f"   🏠 Eventhouse ID: {eventhouse_id}")
+            print(f"   HOME: Eventhouse ID: {eventhouse_id}")
     elif monitoring_enabled is False:
-        print(f"   ❌ DISABLED (detected via {detection_method})")
+        print(f"   ERROR: DISABLED (detected via {detection_method})")
     else:
-        print(f"   ⚠️  UNKNOWN (detection method: {detection_method})")
+        print(f"   WARNING:  UNKNOWN (detection method: {detection_method})")
     
     # Strategy
-    print(f"\n⚙️  Collection Strategy: {strategy.strategy.upper()}")
+    print(f"\n[CONFIG]️  Collection Strategy: {strategy.strategy.upper()}")
     
     # Collection recommendations
     recommendations = workspace_monitoring_status.get("collection_recommendations", {})
-    print(f"\n📋 Collection Decisions:")
+    print(f"\nINFO: Collection Decisions:")
     
     for data_source, recommendation in recommendations.items():
         decision = strategy.should_collect_data_source(data_source, workspace_monitoring_status)
-        status_icon = "✅" if decision["collect"] else "❌"
+        status_icon = "SUCCESS:" if decision["collect"] else "ERROR:"
         conflict_level = recommendation.get("conflict_level", "unknown")
-        conflict_icon = {"none": "🟢", "high": "🔴", "unknown": "🟡"}.get(conflict_level, "⚪")
+        conflict_icon = {"none": "[ACTIVE]", "high": "[STOPPED]", "unknown": "[PENDING]"}.get(conflict_level, "[IDLE]")
         
         print(f"   {status_icon} {data_source.replace('_', ' ').title()}")
         print(f"      └─ Reason: {decision['reason']}")

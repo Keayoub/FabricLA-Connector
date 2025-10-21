@@ -1,0 +1,236 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "dcrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Data Collection Rule for Spark monitoring"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the DCR"
+      }
+    },
+    "dceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Data Collection Endpoint"
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Log Analytics Workspace"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2022-06-01",
+      "name": "[parameters('dcrName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "dataCollectionEndpointId": "[parameters('dceResourceId')]",
+        "description": "Data Collection Rule for Fabric Spark Monitoring - Livy Sessions, Jobs, Notebooks, Resource Usage",
+        "streamDeclarations": {
+          "Custom-FabricSparkLivySession_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "SessionId", "type": "string" },
+              { "name": "ApplicationId", "type": "string" },
+              { "name": "ItemType", "type": "string" },
+              { "name": "ItemId", "type": "string" },
+              { "name": "ItemName", "type": "string" },
+              { "name": "Owner", "type": "string" },
+              { "name": "ProxyUser", "type": "string" },
+              { "name": "Kind", "type": "string" },
+              { "name": "State", "type": "string" },
+              { "name": "DriverLogUrl", "type": "string" },
+              { "name": "SparkUiUrl", "type": "string" },
+              { "name": "SessionLogs", "type": "dynamic" },
+              { "name": "CreatedTime", "type": "datetime" },
+              { "name": "LastUpdatedTime", "type": "datetime" },
+              { "name": "WorkspaceName", "type": "string" }
+            ]
+          },
+          "Custom-FabricSparkLogs_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "SessionId", "type": "string" },
+              { "name": "ApplicationId", "type": "string" },
+              { "name": "LogType", "type": "string" },
+              { "name": "ExecutorId", "type": "string" },
+              { "name": "LogLevel", "type": "string" },
+              { "name": "LogMessage", "type": "string" },
+              { "name": "LogTimestamp", "type": "datetime" },
+              { "name": "SequenceNumber", "type": "int" },
+              { "name": "ItemType", "type": "string" },
+              { "name": "ItemId", "type": "string" },
+              { "name": "ItemName", "type": "string" }
+            ]
+          },
+          "Custom-FabricSparkHistoryMetrics_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "ApplicationId", "type": "string" },
+              { "name": "SessionId", "type": "string" },
+              { "name": "MetricType", "type": "string" },
+              { "name": "JobId", "type": "int" },
+              { "name": "StageId", "type": "int" },
+              { "name": "ExecutorId", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTime", "type": "datetime" },
+              { "name": "EndTime", "type": "datetime" },
+              { "name": "DurationMs", "type": "long" },
+              { "name": "TaskCount", "type": "int" },
+              { "name": "SuccessfulTasks", "type": "int" },
+              { "name": "FailedTasks", "type": "int" },
+              { "name": "ShuffleReadBytes", "type": "long" },
+              { "name": "ShuffleWriteBytes", "type": "long" },
+              { "name": "MemoryUsed", "type": "long" },
+              { "name": "DiskUsed", "type": "long" }
+            ]
+          },
+          "Custom-FabricSparkResourceUsage_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "SessionId", "type": "string" },
+              { "name": "ApplicationId", "type": "string" },
+              { "name": "ItemType", "type": "string" },
+              { "name": "ItemId", "type": "string" },
+              { "name": "ItemName", "type": "string" },
+              { "name": "ResourceType", "type": "string" },
+              { "name": "ExecutorId", "type": "string" },
+              { "name": "CpuUsagePercent", "type": "real" },
+              { "name": "MemoryUsedMB", "type": "long" },
+              { "name": "MemoryTotalMB", "type": "long" },
+              { "name": "MemoryUsagePercent", "type": "real" },
+              { "name": "DiskUsedMB", "type": "long" },
+              { "name": "DiskTotalMB", "type": "long" },
+              { "name": "NetworkReadMB", "type": "long" },
+              { "name": "NetworkWriteMB", "type": "long" },
+              { "name": "GcTimeMs", "type": "long" },
+              { "name": "TasksActive", "type": "int" },
+              { "name": "TasksCompleted", "type": "int" },
+              { "name": "TasksFailed", "type": "int" },
+              { "name": "ShuffleReadMB", "type": "long" },
+              { "name": "ShuffleWriteMB", "type": "long" },
+              { "name": "Timestamp", "type": "datetime" }
+            ]
+          },
+          "Custom-FabricSparkJobs_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "JobId", "type": "string" },
+              { "name": "JobName", "type": "string" },
+              { "name": "Status", "type": "string" }
+            ]
+          },
+          "Custom-FabricSparkJobRuns_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "JobId", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "Status", "type": "string" }
+            ]
+          },
+          "Custom-FabricNotebooks_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "NotebookId", "type": "string" },
+              { "name": "NotebookName", "type": "string" }
+            ]
+          },
+          "Custom-FabricNotebookRuns_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "NotebookId", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "Status", "type": "string" }
+            ]
+          }
+        },
+        "destinations": {
+          "logAnalytics": [
+            {
+              "workspaceResourceId": "[parameters('lawResourceId')]",
+              "name": "laDest"
+            }
+          ]
+        },
+        "dataFlows": [
+          {
+            "streams": ["Custom-FabricSparkLivySession_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkLivySession_CL"
+          },
+          {
+            "streams": ["Custom-FabricSparkLogs_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkLogs_CL"
+          },
+          {
+            "streams": ["Custom-FabricSparkHistoryMetrics_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkHistoryMetrics_CL"
+          },
+          {
+            "streams": ["Custom-FabricSparkResourceUsage_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkResourceUsage_CL"
+          },
+          {
+            "streams": ["Custom-FabricSparkJobs_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkJobs_CL"
+          },
+          {
+            "streams": ["Custom-FabricSparkJobRuns_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSparkJobRuns_CL"
+          },
+          {
+            "streams": ["Custom-FabricNotebooks_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricNotebooks_CL"
+          },
+          {
+            "streams": ["Custom-FabricNotebookRuns_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricNotebookRuns_CL"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "dcrImmutableId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))).immutableId]"
+    },
+    "dcrResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
+    }
+  }
+}

@@ -4,7 +4,7 @@ Implements collectors for pipelines, datasets, capacity utilization, and user ac
 """
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any, Iterator
 import time
 from .api import get_fabric_token
@@ -25,14 +25,14 @@ def handle_api_response(response: requests.Response, context: str) -> Any:
         
     if response.status_code == 429:
         retry_after = int(response.headers.get('Retry-After', 60))
-        print(f"⚠️ 429 Rate Limited - {context}")
+        print(f"WARNING: 429 Rate Limited - {context}")
         print(f"   Waiting {retry_after} seconds before retry...")
         print("   API rate limit exceeded, consider reducing concurrent requests")
         time.sleep(retry_after)
         raise FabricAPIException(f"Rate limited: {context}")
     
     if response.status_code == 401:
-        print(f"❌ 401 Unauthorized - Authentication failed for {context}")
+        print(f"ERROR: 401 Unauthorized - Authentication failed for {context}")
         print("   Possible causes:")
         print("   1. Token expired or invalid")
         print("   2. Service principal doesn't have 'Fabric.ReadAll' permission")
@@ -42,13 +42,13 @@ def handle_api_response(response: requests.Response, context: str) -> Any:
         raise FabricAPIException(f"Authentication failed: {context}")
         
     if response.status_code == 403:
-        print(f"❌ 403 Forbidden - Permission denied for {context}")
+        print(f"ERROR: 403 Forbidden - Permission denied for {context}")
         print("   The service principal needs 'Fabric.ReadAll' application permission")
         print(f"   Response: {response.text[:200]}")
         raise FabricAPIException(f"Permission denied: {context}")
         
     if response.status_code == 404:
-        print(f"❌ 404 Not Found - Resource doesn't exist for {context}")
+        print(f"ERROR: 404 Not Found - Resource doesn't exist for {context}")
         print(f"   Response: {response.text[:200]}")
         raise FabricAPIException(f"Resource not found: {context}")
     
@@ -59,7 +59,7 @@ def handle_api_response(response: requests.Response, context: str) -> Any:
     except:
         error_msg = f'HTTP {response.status_code}: {response.text[:200]}'
     
-    print(f"❌ API Error ({response.status_code}) for {context}: {error_msg}")
+    print(f"ERROR: API Error ({response.status_code}) for {context}: {error_msg}")
     raise FabricAPIException(f"API error: {error_msg} - {context}")
 
 
@@ -427,6 +427,195 @@ def map_user_activity(workspace_id: str, activity: Dict) -> Dict:
     }
 
 
+def map_livy_session(workspace_id: str, item_type: str, item_id: str, item_name: str, session: Dict, workspace_name: Optional[str] = None) -> Dict:
+    """
+    Map Livy session data to Log Analytics schema for FabricSparkLivySession_CL table.
+    
+    Args:
+        workspace_id: The Fabric workspace ID
+        item_type: Type of item (Notebook, SparkJobDefinition, Lakehouse)
+        item_id: ID of the parent item
+        item_name: Display name of the parent item
+        session: Livy session object from API
+        workspace_name: Optional workspace display name
+    
+    Returns:
+        Dictionary matching FabricSparkLivySession_CL schema
+    """
+    # Extract timestamps
+    created_time = session.get('createdAt') or session.get('createdTime')
+    last_updated = session.get('lastUpdatedAt') or session.get('lastUpdatedTime') or created_time
+    
+    # Use last_updated as TimeGenerated, fallback to created, then current time
+    time_generated = last_updated or created_time or iso_now()
+    
+    # Extract application ID (may be in different fields)
+    app_id = session.get('appId') or session.get('applicationId') or session.get('sparkApplicationId')
+    
+    # Extract session logs if available
+    session_logs = session.get('log') or session.get('logs')
+    if session_logs and isinstance(session_logs, list):
+        # Keep as structured data for Log Analytics
+        session_logs = session_logs
+    else:
+        session_logs = None
+    
+    return {
+        "TimeGenerated": time_generated,
+        "WorkspaceId": workspace_id,
+        "SessionId": session.get('id'),
+        "ApplicationId": app_id,
+        "ItemType": item_type,
+        "ItemId": item_id,
+        "ItemName": item_name,
+        "Owner": session.get('owner'),
+        "ProxyUser": session.get('proxyUser'),
+        "Kind": session.get('kind'),  # spark, pyspark, sparkr, sql
+        "State": session.get('state'),  # not_started, starting, idle, busy, shutting_down, error, dead, killed, success
+        "DriverLogUrl": session.get('driverLogUrl'),
+        "SparkUiUrl": session.get('sparkUiUrl') or session.get('appInfo', {}).get('sparkUiUrl'),
+        "SessionLogs": session_logs,
+        "CreatedTime": created_time,
+        "LastUpdatedTime": last_updated,
+        "WorkspaceName": workspace_name
+    }
+
+
+def map_spark_resource_driver(workspace_id: str, session_id: str, app_id: str, item_type: str, item_id: str, item_name: str, driver_data: Dict, timestamp: Optional[str] = None) -> Dict:
+    """
+    Map Spark driver resource usage to Log Analytics schema.
+    
+    Args:
+        workspace_id: The Fabric workspace ID
+        session_id: Livy session ID
+        app_id: Spark application ID
+        item_type: Type of item (Notebook, SparkJobDefinition, etc.)
+        item_id: ID of the parent item
+        item_name: Display name of the parent item
+        driver_data: Driver resource data from API
+        timestamp: Optional timestamp for the metrics
+    
+    Returns:
+        Dictionary matching FabricSparkResourceUsage_CL schema
+    """
+    return {
+        "TimeGenerated": timestamp or iso_now(),
+        "WorkspaceId": workspace_id,
+        "SessionId": session_id,
+        "ApplicationId": app_id,
+        "ItemType": item_type,
+        "ItemId": item_id,
+        "ItemName": item_name,
+        "ResourceType": "driver",
+        "ExecutorId": None,  # Drivers don't have executor IDs
+        "CpuUsagePercent": driver_data.get('cpuUsagePercent'),
+        "MemoryUsedMB": driver_data.get('memoryUsedMB'),
+        "MemoryTotalMB": driver_data.get('memoryTotalMB'),
+        "MemoryUsagePercent": driver_data.get('memoryUsagePercent'),
+        "DiskUsedMB": driver_data.get('diskUsedMB'),
+        "DiskTotalMB": driver_data.get('diskTotalMB'),
+        "NetworkReadMB": driver_data.get('networkReadMB'),
+        "NetworkWriteMB": driver_data.get('networkWriteMB'),
+        "GcTimeMs": driver_data.get('gcTimeMs'),
+        "TasksActive": driver_data.get('tasksActive'),
+        "TasksCompleted": driver_data.get('tasksCompleted'),
+        "TasksFailed": driver_data.get('tasksFailed'),
+        "ShuffleReadMB": driver_data.get('shuffleReadMB'),
+        "ShuffleWriteMB": driver_data.get('shuffleWriteMB'),
+        "Timestamp": timestamp or iso_now()
+    }
+
+
+def map_spark_resource_executor(workspace_id: str, session_id: str, app_id: str, item_type: str, item_id: str, item_name: str, executor_data: Dict, timestamp: Optional[str] = None) -> Dict:
+    """
+    Map Spark executor resource usage to Log Analytics schema.
+    
+    Args:
+        workspace_id: The Fabric workspace ID
+        session_id: Livy session ID
+        app_id: Spark application ID
+        item_type: Type of item (Notebook, SparkJobDefinition, etc.)
+        item_id: ID of the parent item
+        item_name: Display name of the parent item
+        executor_data: Executor resource data from API
+        timestamp: Optional timestamp for the metrics
+    
+    Returns:
+        Dictionary matching FabricSparkResourceUsage_CL schema
+    """
+    return {
+        "TimeGenerated": timestamp or iso_now(),
+        "WorkspaceId": workspace_id,
+        "SessionId": session_id,
+        "ApplicationId": app_id,
+        "ItemType": item_type,
+        "ItemId": item_id,
+        "ItemName": item_name,
+        "ResourceType": "executor",
+        "ExecutorId": executor_data.get('executorId'),
+        "CpuUsagePercent": executor_data.get('cpuUsagePercent'),
+        "MemoryUsedMB": executor_data.get('memoryUsedMB'),
+        "MemoryTotalMB": executor_data.get('memoryTotalMB'),
+        "MemoryUsagePercent": executor_data.get('memoryUsagePercent'),
+        "DiskUsedMB": executor_data.get('diskUsedMB'),
+        "DiskTotalMB": executor_data.get('diskTotalMB'),
+        "NetworkReadMB": executor_data.get('networkReadMB'),
+        "NetworkWriteMB": executor_data.get('networkWriteMB'),
+        "GcTimeMs": executor_data.get('gcTimeMs'),
+        "TasksActive": executor_data.get('tasksActive'),
+        "TasksCompleted": executor_data.get('tasksCompleted'),
+        "TasksFailed": executor_data.get('tasksFailed'),
+        "ShuffleReadMB": executor_data.get('shuffleReadMB'),
+        "ShuffleWriteMB": executor_data.get('shuffleWriteMB'),
+        "Timestamp": timestamp or iso_now()
+    }
+
+
+def map_spark_resource_aggregate(workspace_id: str, session_id: str, app_id: str, item_type: str, item_id: str, item_name: str, aggregate_data: Dict, timestamp: Optional[str] = None) -> Dict:
+    """
+    Map Spark aggregate resource usage to Log Analytics schema.
+    
+    Args:
+        workspace_id: The Fabric workspace ID
+        session_id: Livy session ID
+        app_id: Spark application ID
+        item_type: Type of item (Notebook, SparkJobDefinition, etc.)
+        item_id: ID of the parent item
+        item_name: Display name of the parent item
+        aggregate_data: Aggregate resource data from API
+        timestamp: Optional timestamp for the metrics
+    
+    Returns:
+        Dictionary matching FabricSparkResourceUsage_CL schema
+    """
+    return {
+        "TimeGenerated": timestamp or iso_now(),
+        "WorkspaceId": workspace_id,
+        "SessionId": session_id,
+        "ApplicationId": app_id,
+        "ItemType": item_type,
+        "ItemId": item_id,
+        "ItemName": item_name,
+        "ResourceType": "aggregate",
+        "ExecutorId": None,  # Aggregates don't have executor IDs
+        "CpuUsagePercent": aggregate_data.get('cpuUsagePercent'),
+        "MemoryUsedMB": aggregate_data.get('memoryUsedMB'),
+        "MemoryTotalMB": aggregate_data.get('memoryTotalMB'),
+        "MemoryUsagePercent": aggregate_data.get('memoryUsagePercent'),
+        "DiskUsedMB": aggregate_data.get('diskUsedMB'),
+        "DiskTotalMB": aggregate_data.get('diskTotalMB'),
+        "NetworkReadMB": aggregate_data.get('networkReadMB'),
+        "NetworkWriteMB": aggregate_data.get('networkWriteMB'),
+        "GcTimeMs": aggregate_data.get('gcTimeMs'),
+        "TasksActive": aggregate_data.get('tasksActive'),
+        "TasksCompleted": aggregate_data.get('tasksCompleted'),
+        "TasksFailed": aggregate_data.get('tasksFailed'),
+        "ShuffleReadMB": aggregate_data.get('shuffleReadMB'),
+        "ShuffleWriteMB": aggregate_data.get('shuffleWriteMB'),
+        "Timestamp": timestamp or iso_now()
+    }
+
+
 # === Collector Classes ===
 
 class PipelineDataCollector:
@@ -603,10 +792,10 @@ class OneLakeStorageCollector:
                         "Description": item.get('description', '')
                     }
                 else:
-                    print(f"⚠️ Failed to get details for lakehouse {item['id']}: {detail_response.status_code}")
+                    print(f"WARNING: Failed to get details for lakehouse {item['id']}: {detail_response.status_code}")
                     
         except Exception as e:
-            print(f"❌ Error collecting lakehouse storage info: {str(e)}")
+            print(f"ERROR: collecting lakehouse storage info: {str(e)}")
     
     def collect_warehouse_storage(self) -> Iterator[Dict]:
         """Collect warehouse storage information and usage patterns"""
@@ -638,10 +827,10 @@ class OneLakeStorageCollector:
                         "Description": item.get('description', '')
                     }
                 else:
-                    print(f"⚠️ Failed to get details for warehouse {item['id']}: {detail_response.status_code}")
+                    print(f"WARNING: Failed to get details for warehouse {item['id']}: {detail_response.status_code}")
                     
         except Exception as e:
-            print(f"❌ Error collecting warehouse storage info: {str(e)}")
+            print(f"ERROR: collecting warehouse storage info: {str(e)}")
 
 
 class SparkJobCollector:
@@ -691,7 +880,7 @@ class SparkJobCollector:
                     }
                     
         except Exception as e:
-            print(f"❌ Error collecting Spark job definitions: {str(e)}")
+            print(f"ERROR: collecting Spark job definitions: {str(e)}")
     
     def collect_spark_job_runs(self) -> Iterator[Dict]:
         """Collect Spark job execution runs within lookback period"""
@@ -738,7 +927,45 @@ class SparkJobCollector:
                     }
                     
         except Exception as e:
-            print(f"❌ Error collecting Spark job runs: {str(e)}")
+            print(f"ERROR: collecting Spark job runs: {str(e)}")
+    
+    def collect_sparkjob_livy_sessions(self, workspace_name: Optional[str] = None) -> Iterator[Dict]:
+        """
+        Collect Livy sessions for all Spark Job Definitions in workspace.
+        
+        This method iterates through all Spark Job Definitions and collects their
+        Livy sessions using the new collect_livy_sessions_sparkjob() function.
+        
+        Args:
+            workspace_name: Optional workspace display name for enrichment
+            
+        Yields:
+            Dict containing Livy session data for Spark jobs
+        """
+        try:
+            # Get all Spark job definitions first
+            url = f"https://api.fabric.microsoft.com/v1/workspaces/{self.workspace_id}/items"
+            params = {'type': 'SparkJobDefinition'}
+            
+            response = requests.get(url, headers=self.headers, params=params)
+            items_data = handle_api_response(response, f"Spark job definitions for workspace {self.workspace_id}")
+            
+            for item in items_data.get('value', []):
+                sparkjob_id = item['id']
+                sparkjob_name = item['displayName']
+                
+                # Collect Livy sessions for this Spark job
+                for session in collect_livy_sessions_sparkjob(
+                    workspace_id=self.workspace_id,
+                    sparkjob_id=sparkjob_id,
+                    sparkjob_name=sparkjob_name,
+                    workspace_name=workspace_name,
+                    lookback_hours=self.lookback_hours
+                ):
+                    yield session
+                    
+        except Exception as e:
+            print(f"ERROR: collecting SparkJob Livy sessions: {str(e)}")
 
 
 class NotebookCollector:
@@ -775,7 +1002,7 @@ class NotebookCollector:
                 }
                 
         except Exception as e:
-            print(f"❌ Error collecting notebook inventory: {str(e)}")
+            print(f"ERROR: collecting notebook inventory: {str(e)}")
     
     def collect_notebook_runs(self) -> Iterator[Dict]:
         """Collect notebook execution runs within lookback period"""
@@ -819,7 +1046,45 @@ class NotebookCollector:
                     }
                     
         except Exception as e:
-            print(f"❌ Error collecting notebook runs: {str(e)}")
+            print(f"ERROR: collecting notebook runs: {str(e)}")
+    
+    def collect_notebook_livy_sessions(self, workspace_name: Optional[str] = None) -> Iterator[Dict]:
+        """
+        Collect Livy sessions for all notebooks in workspace.
+        
+        This method iterates through all notebooks and collects their Livy sessions
+        using the new collect_livy_sessions_notebook() function.
+        
+        Args:
+            workspace_name: Optional workspace display name for enrichment
+            
+        Yields:
+            Dict containing Livy session data for notebooks
+        """
+        try:
+            # Get all notebooks first
+            url = f"https://api.fabric.microsoft.com/v1/workspaces/{self.workspace_id}/items"
+            params = {'type': 'Notebook'}
+            
+            response = requests.get(url, headers=self.headers, params=params)
+            items_data = handle_api_response(response, f"Notebooks for workspace {self.workspace_id}")
+            
+            for item in items_data.get('value', []):
+                notebook_id = item['id']
+                notebook_name = item['displayName']
+                
+                # Collect Livy sessions for this notebook
+                for session in collect_livy_sessions_notebook(
+                    workspace_id=self.workspace_id,
+                    notebook_id=notebook_id,
+                    notebook_name=notebook_name,
+                    workspace_name=workspace_name,
+                    lookback_hours=self.lookback_hours
+                ):
+                    yield session
+                    
+        except Exception as e:
+            print(f"ERROR: collecting notebook Livy sessions: {str(e)}")
 
 
 class GitIntegrationCollector:
@@ -865,10 +1130,10 @@ class GitIntegrationCollector:
                     "ItemType": "GitConnection"
                 }
             else:
-                print(f"⚠️ Failed to get Git connection info: {response.status_code}")
+                print(f"WARNING: Failed to get Git connection info: {response.status_code}")
                 
         except Exception as e:
-            print(f"❌ Error collecting Git connection info: {str(e)}")
+            print(f"ERROR: collecting Git connection info: {str(e)}")
     
     def collect_git_status(self) -> Iterator[Dict]:
         """Collect Git status for workspace items"""
@@ -910,10 +1175,10 @@ class GitIntegrationCollector:
                 # No Git connection configured
                 pass
             else:
-                print(f"⚠️ Failed to get Git status: {response.status_code}")
+                print(f"WARNING: Failed to get Git status: {response.status_code}")
                 
         except Exception as e:
-            print(f"❌ Error collecting Git status: {str(e)}")
+            print(f"ERROR: collecting Git status: {str(e)}")
 
 
 class AccessPermissionsCollector:
@@ -940,6 +1205,13 @@ class AccessPermissionsCollector:
                 workspace_data = response.json()
                 
                 # Extract OAP and other configuration settings
+                # OutboundAccessProtectionEnabled is the new, explicit flag for Outbound Access Protection (OAP).
+                # Fall back to the platform's OneLake Access Point flag if the explicit flag isn't present.
+                outbound_protection = workspace_data.get('settings', {}).get(
+                    'outboundAccessProtectionEnabled',
+                    workspace_data.get('settings', {}).get('oneLakeAccessPointEnabled', False)
+                )
+
                 yield {
                     "TimeGenerated": iso_now(),
                     "WorkspaceId": self.workspace_id,
@@ -951,6 +1223,8 @@ class AccessPermissionsCollector:
                     # OneLake Access Point (OAP) Configuration
                     "OneLakeAccessEnabled": workspace_data.get('oneLakeAccessEnabled', False),
                     "OneLakeAccessPointEnabled": workspace_data.get('settings', {}).get('oneLakeAccessPointEnabled', False),
+                    # Explicit Outbound Access Protection flag (preferred)
+                    "OutboundAccessProtectionEnabled": outbound_protection,
                     
                     # Data access and security settings
                     "ReadOnlyState": workspace_data.get('settings', {}).get('readOnlyState'),
@@ -979,13 +1253,18 @@ class AccessPermissionsCollector:
                     "MetricType": "WorkspaceConfig"
                 }
             elif response.status_code == 403:
-                print(f"⚠️ Workspace config collection requires admin permissions (403)")
+                print(f"WARNING: Workspace config collection requires admin permissions (403)")
                 # Try non-admin endpoint as fallback
                 fallback_url = f"{self.base_url}/workspaces/{self.workspace_id}"
                 fallback_response = requests.get(fallback_url, headers=headers)
                 
                 if fallback_response.status_code == 200:
                     workspace_data = fallback_response.json()
+                    # Attempt to infer outbound protection from available fields when admin access is not available.
+                    fallback_outbound = workspace_data.get('settings', {}).get(
+                        'outboundAccessProtectionEnabled',
+                        workspace_data.get('settings', {}).get('oneLakeAccessPointEnabled', False)
+                    )
                     yield {
                         "TimeGenerated": iso_now(),
                         "WorkspaceId": self.workspace_id,
@@ -993,14 +1272,15 @@ class AccessPermissionsCollector:
                         "WorkspaceType": workspace_data.get('type'),
                         "CapacityId": workspace_data.get('capacityId'),
                         "Description": workspace_data.get('description', ''),
+                        "OutboundAccessProtectionEnabled": fallback_outbound,
                         "MetricType": "WorkspaceConfig",
                         "Note": "Limited data - admin permissions required for full config"
                     }
             else:
-                print(f"⚠️ Failed to get workspace config: {response.status_code}")
+                print(f"WARNING: Failed to get workspace config: {response.status_code}")
                 
         except Exception as e:
-            print(f"❌ Error collecting workspace config: {str(e)}")
+            print(f"ERROR: collecting workspace config: {str(e)}")
     
     def collect_workspace_permissions(self) -> Iterator[Dict[str, Any]]:
         """Collect workspace permissions and role assignments"""
@@ -1028,10 +1308,10 @@ class AccessPermissionsCollector:
                         "AssignmentType": "WorkspaceRole"
                     }
             else:
-                print(f"⚠️ Failed to get workspace role assignments: {response.status_code}")
+                print(f"WARNING: Failed to get workspace role assignments: {response.status_code}")
                 
         except Exception as e:
-            print(f"❌ Error collecting workspace permissions: {str(e)}")
+            print(f"ERROR: collecting workspace permissions: {str(e)}")
     
     def collect_item_permissions(self) -> Iterator[Dict[str, Any]]:
         """Collect item-level permissions for datasets, reports, etc."""
@@ -1074,7 +1354,7 @@ class AccessPermissionsCollector:
                                 }
                                 
         except Exception as e:
-            print(f"❌ Error collecting item permissions: {str(e)}")
+            print(f"ERROR: collecting item permissions: {str(e)}")
     
     def collect_capacity_permissions(self, capacity_id: Optional[str] = None) -> Iterator[Dict[str, Any]]:
         """Collect capacity-level permissions and assignments"""
@@ -1106,10 +1386,10 @@ class AccessPermissionsCollector:
                         "AssignmentType": "CapacityRole"
                     }
             else:
-                print(f"⚠️ Failed to get capacity role assignments: {response.status_code}")
+                print(f"WARNING: Failed to get capacity role assignments: {response.status_code}")
                 
         except Exception as e:
-            print(f"❌ Error collecting capacity permissions: {str(e)}")
+            print(f"ERROR: collecting capacity permissions: {str(e)}")
 
 
 class DataLineageCollector:
@@ -1175,7 +1455,7 @@ class DataLineageCollector:
                             }
                             
         except Exception as e:
-            print(f"❌ Error collecting dataset lineage: {str(e)}")
+            print(f"ERROR: collecting dataset lineage: {str(e)}")
     
     def collect_dataflow_lineage(self) -> Iterator[Dict[str, Any]]:
         """Collect dataflow transformation lineage"""
@@ -1215,7 +1495,7 @@ class DataLineageCollector:
                             }
                             
         except Exception as e:
-            print(f"❌ Error collecting dataflow lineage: {str(e)}")
+            print(f"ERROR: collecting dataflow lineage: {str(e)}")
 
 
 class SemanticModelCollector:
@@ -1274,7 +1554,7 @@ class SemanticModelCollector:
                             }
                             
         except Exception as e:
-            print(f"❌ Error collecting model refresh performance: {str(e)}")
+            print(f"ERROR: collecting model refresh performance: {str(e)}")
     
     def collect_model_usage_patterns(self) -> Iterator[Dict[str, Any]]:
         """Collect semantic model query patterns and usage"""
@@ -1314,7 +1594,7 @@ class SemanticModelCollector:
                         }
                         
         except Exception as e:
-            print(f"❌ Error collecting model usage patterns: {str(e)}")
+            print(f"ERROR: collecting model usage patterns: {str(e)}")
 
 
 class RealTimeIntelligenceCollector:
@@ -1355,7 +1635,7 @@ class RealTimeIntelligenceCollector:
                     }
                     
         except Exception as e:
-            print(f"❌ Error collecting Eventstream metrics: {str(e)}")
+            print(f"ERROR: collecting Eventstream metrics: {str(e)}")
     
     def collect_kql_database_performance(self) -> Iterator[Dict[str, Any]]:
         """Collect KQL Database performance and usage metrics"""
@@ -1388,7 +1668,7 @@ class RealTimeIntelligenceCollector:
                     }
                     
         except Exception as e:
-            print(f"❌ Error collecting KQL Database performance: {str(e)}")
+            print(f"ERROR: collecting KQL Database performance: {str(e)}")
 
 
 class MirroringCollector:
@@ -1449,7 +1729,7 @@ class MirroringCollector:
                         }
                         
         except Exception as e:
-            print(f"❌ Error collecting Mirror status: {str(e)}")
+            print(f"ERROR: collecting Mirror status: {str(e)}")
 
 
 class MLAICollector:
@@ -1490,7 +1770,7 @@ class MLAICollector:
                     }
                     
         except Exception as e:
-            print(f"❌ Error collecting ML Models: {str(e)}")
+            print(f"ERROR: collecting ML Models: {str(e)}")
     
     def collect_ml_experiments(self) -> Iterator[Dict[str, Any]]:
         """Collect ML Experiment tracking and performance data"""
@@ -1523,12 +1803,467 @@ class MLAICollector:
                     }
                     
         except Exception as e:
-            print(f"❌ Error collecting ML Experiments: {str(e)}")
+            print(f"ERROR: collecting ML Experiments: {str(e)}")
 
 
 # ================================
 # Spark Monitoring API Collectors
 # ================================
+
+def collect_livy_sessions_workspace(
+    workspace_id: str,
+    workspace_name: Optional[str] = None,
+    lookback_hours: int = 24
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Livy sessions at workspace level using the Livy Sessions API.
+    This replaces the basic /spark/sessions endpoint with rich Livy session metadata.
+    
+    API: GET /v1/workspaces/{workspaceId}/spark/livySessions
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        workspace_name: Optional workspace display name
+        lookback_hours: Hours to look back for sessions
+        
+    Yields:
+        Dict containing Livy session data mapped to FabricSparkLivySession_CL schema
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/livySessions"
+        
+        response = requests.get(url, headers=headers, timeout=60)
+        data = handle_api_response(response, f"Workspace Livy Sessions - {workspace_id}")
+        
+        # API returns 'value' array according to Microsoft documentation
+        if not data or "value" not in data:
+            return
+            
+        sessions = data["value"]
+        print(f"Found {len(sessions)} Livy sessions")
+        
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+        collected_count = 0
+        
+        for session in sessions:
+            try:
+                # Check if session is within lookback period
+                # Use 'submittedDateTime' as per Microsoft API documentation
+                submitted_time = parse_iso(session.get('submittedDateTime'))
+                if submitted_time and submitted_time < cutoff_time:
+                    continue
+                
+                # For workspace-level sessions, item details may not be available
+                # We'll mark them as workspace-level
+                yield map_livy_session(
+                    workspace_id=workspace_id,
+                    item_type="Workspace",
+                    item_id=workspace_id,
+                    item_name=workspace_name or workspace_id,
+                    session=session,
+                    workspace_name=workspace_name
+                )
+                collected_count += 1
+                
+            except Exception as e:
+                print(f"WARNING: Error processing session: {str(e)}")
+                continue
+        
+        print(f"Collected {collected_count} sessions")
+        
+    except FabricAPIException as e:
+        print(f"ERROR: {str(e)}")
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+
+
+def collect_livy_sessions_notebook(
+    workspace_id: str,
+    notebook_id: str,
+    notebook_name: str,
+    workspace_name: Optional[str] = None,
+    lookback_hours: int = 24
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Livy sessions for a specific Notebook.
+    
+    API: GET /v1/workspaces/{workspaceId}/notebooks/{notebookId}/spark/livySessions
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        notebook_id: Notebook item ID
+        notebook_name: Notebook display name
+        workspace_name: Optional workspace display name
+        lookback_hours: Hours to look back for sessions
+        
+    Yields:
+        Dict containing Livy session data for the notebook
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/notebooks/{notebook_id}/spark/livySessions"
+        
+        response = requests.get(url, headers=headers, timeout=30)
+        data = handle_api_response(response, f"Notebook Livy Sessions - {notebook_name}")
+        
+        if not data or "sessions" not in data:
+            return
+            
+        sessions = data["sessions"]
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+        collected_count = 0
+        
+        for session in sessions:
+            try:
+                created_time = parse_iso(session.get('createdAt') or session.get('createdTime'))
+                if created_time and created_time < cutoff_time:
+                    continue
+                
+                yield map_livy_session(
+                    workspace_id=workspace_id,
+                    item_type="Notebook",
+                    item_id=notebook_id,
+                    item_name=notebook_name,
+                    session=session,
+                    workspace_name=workspace_name
+                )
+                collected_count += 1
+                
+            except Exception as e:
+                print(f"WARNING: Error processing notebook session {session.get('id')}: {str(e)}")
+                continue
+        
+        if collected_count > 0:
+            print(f"SUCCESS: Collected {collected_count} Livy sessions for notebook '{notebook_name}'")
+        
+    except FabricAPIException as e:
+        if "404" not in str(e):
+            print(f"WARNING: Failed to collect notebook Livy sessions for '{notebook_name}': {str(e)}")
+    except Exception as e:
+        print(f"ERROR: Unexpected error collecting notebook Livy sessions: {str(e)}")
+
+
+def collect_livy_sessions_sparkjob(
+    workspace_id: str,
+    sparkjob_id: str,
+    sparkjob_name: str,
+    workspace_name: Optional[str] = None,
+    lookback_hours: int = 24
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Livy sessions for a specific Spark Job Definition.
+    
+    API: GET /v1/workspaces/{workspaceId}/sparkJobDefinitions/{sparkJobId}/spark/livySessions
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        sparkjob_id: SparkJobDefinition item ID
+        sparkjob_name: SparkJobDefinition display name
+        workspace_name: Optional workspace display name
+        lookback_hours: Hours to look back for sessions
+        
+    Yields:
+        Dict containing Livy session data for the Spark job
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/sparkJobDefinitions/{sparkjob_id}/spark/livySessions"
+        
+        response = requests.get(url, headers=headers, timeout=30)
+        data = handle_api_response(response, f"SparkJob Livy Sessions - {sparkjob_name}")
+        
+        if not data or "sessions" not in data:
+            return
+            
+        sessions = data["sessions"]
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+        collected_count = 0
+        
+        for session in sessions:
+            try:
+                created_time = parse_iso(session.get('createdAt') or session.get('createdTime'))
+                if created_time and created_time < cutoff_time:
+                    continue
+                
+                yield map_livy_session(
+                    workspace_id=workspace_id,
+                    item_type="SparkJobDefinition",
+                    item_id=sparkjob_id,
+                    item_name=sparkjob_name,
+                    session=session,
+                    workspace_name=workspace_name
+                )
+                collected_count += 1
+                
+            except Exception as e:
+                print(f"WARNING: Error processing SparkJob session {session.get('id')}: {str(e)}")
+                continue
+        
+        if collected_count > 0:
+            print(f"SUCCESS: Collected {collected_count} Livy sessions for SparkJob '{sparkjob_name}'")
+        
+    except FabricAPIException as e:
+        if "404" not in str(e):
+            print(f"WARNING: Failed to collect SparkJob Livy sessions for '{sparkjob_name}': {str(e)}")
+    except Exception as e:
+        print(f"ERROR: Unexpected error collecting SparkJob Livy sessions: {str(e)}")
+
+
+def collect_livy_sessions_lakehouse(
+    workspace_id: str,
+    lakehouse_id: str,
+    lakehouse_name: str,
+    workspace_name: Optional[str] = None,
+    lookback_hours: int = 24
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect Livy sessions for a specific Lakehouse.
+    
+    API: GET /v1/workspaces/{workspaceId}/lakehouses/{lakehouseId}/spark/livySessions
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        lakehouse_id: Lakehouse item ID
+        lakehouse_name: Lakehouse display name
+        workspace_name: Optional workspace display name
+        lookback_hours: Hours to look back for sessions
+        
+    Yields:
+        Dict containing Livy session data for the lakehouse
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/lakehouses/{lakehouse_id}/spark/livySessions"
+        
+        response = requests.get(url, headers=headers, timeout=30)
+        data = handle_api_response(response, f"Lakehouse Livy Sessions - {lakehouse_name}")
+        
+        if not data or "sessions" not in data:
+            return
+            
+        sessions = data["sessions"]
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+        collected_count = 0
+        
+        for session in sessions:
+            try:
+                created_time = parse_iso(session.get('createdAt') or session.get('createdTime'))
+                if created_time and created_time < cutoff_time:
+                    continue
+                
+                yield map_livy_session(
+                    workspace_id=workspace_id,
+                    item_type="Lakehouse",
+                    item_id=lakehouse_id,
+                    item_name=lakehouse_name,
+                    session=session,
+                    workspace_name=workspace_name
+                )
+                collected_count += 1
+                
+            except Exception as e:
+                print(f"WARNING: Error processing Lakehouse session {session.get('id')}: {str(e)}")
+                continue
+        
+        if collected_count > 0:
+            print(f"SUCCESS: Collected {collected_count} Livy sessions for Lakehouse '{lakehouse_name}'")
+        
+    except FabricAPIException as e:
+        if "404" not in str(e):
+            print(f"WARNING: Failed to collect Lakehouse Livy sessions for '{lakehouse_name}': {str(e)}")
+    except Exception as e:
+        print(f"ERROR: Unexpected error collecting Lakehouse Livy sessions: {str(e)}")
+
+
+def collect_spark_resource_usage(
+    workspace_id: str,
+    application_id: str,
+    session_id: str,
+    item_type: str,
+    item_id: str,
+    item_name: str,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None
+) -> Iterator[Dict[str, Any]]:
+    """
+    Collect resource usage metrics for a specific Spark application.
+    Supports both current snapshot and historical time range queries.
+    
+    API: GET /v1/workspaces/{workspaceId}/spark/applications/{applicationId}/resource-usage
+    API: GET /v1/workspaces/{workspaceId}/spark/applications/{applicationId}/resource-usage?startTime={iso8601}&endTime={iso8601}
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        application_id: Spark application ID
+        session_id: Livy session ID
+        item_type: Type of item (Notebook, SparkJobDefinition, etc.)
+        item_id: ID of the parent item
+        item_name: Display name of the parent item
+        start_time: Optional start time for historical metrics (ISO 8601)
+        end_time: Optional end time for historical metrics (ISO 8601)
+        
+    Yields:
+        Dict containing resource usage data (driver, executors, aggregates)
+    """
+    try:
+        token = get_fabric_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Build URL with optional time range parameters
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/applications/{application_id}/resource-usage"
+        params = {}
+        
+        if start_time and end_time:
+            params['startTime'] = start_time
+            params['endTime'] = end_time
+            context_msg = f"Historical resource usage for {application_id} ({start_time} to {end_time})"
+        else:
+            context_msg = f"Current resource usage for {application_id}"
+        
+        response = requests.get(url, headers=headers, params=params, timeout=30)
+        data = handle_api_response(response, context_msg)
+        
+        if not data:
+            return
+        
+        timestamp = data.get('timestamp') or iso_now()
+        
+        # Yield driver resource metrics
+        driver_data = data.get('driver')
+        if driver_data:
+            yield map_spark_resource_driver(
+                workspace_id=workspace_id,
+                session_id=session_id,
+                app_id=application_id,
+                item_type=item_type,
+                item_id=item_id,
+                item_name=item_name,
+                driver_data=driver_data,
+                timestamp=timestamp
+            )
+        
+        # Yield executor resource metrics
+        executors = data.get('executors', [])
+        for executor in executors:
+            yield map_spark_resource_executor(
+                workspace_id=workspace_id,
+                session_id=session_id,
+                app_id=application_id,
+                item_type=item_type,
+                item_id=item_id,
+                item_name=item_name,
+                executor_data=executor,
+                timestamp=timestamp
+            )
+        
+        # Yield aggregate resource metrics
+        aggregates = data.get('aggregates')
+        if aggregates:
+            yield map_spark_resource_aggregate(
+                workspace_id=workspace_id,
+                session_id=session_id,
+                app_id=application_id,
+                item_type=item_type,
+                item_id=item_id,
+                item_name=item_name,
+                aggregate_data=aggregates,
+                timestamp=timestamp
+            )
+        
+    except FabricAPIException as e:
+        if "404" not in str(e):
+            print(f"WARNING: Failed to collect resource usage for {application_id}: {str(e)}")
+    except Exception as e:
+        print(f"ERROR: Unexpected error collecting resource usage: {str(e)}")
+
+
+def collect_resource_usage_for_active_sessions(
+    workspace_id: str,
+    workspace_name: Optional[str] = None,
+    lookback_hours: int = 24
+) -> Iterator[Dict[str, Any]]:
+    """
+    Batch collect resource usage for all active Livy sessions in a workspace.
+    This function first gets all active sessions, then collects resource metrics for each.
+    
+    Args:
+        workspace_id: Fabric workspace ID
+        workspace_name: Optional workspace display name
+        lookback_hours: Hours to look back for sessions
+        
+    Yields:
+        Dict containing resource usage data for all active sessions
+    """
+    try:
+        # First, collect all Livy sessions to get session and application IDs
+        sessions = list(collect_livy_sessions_workspace(
+            workspace_id=workspace_id,
+            workspace_name=workspace_name,
+            lookback_hours=lookback_hours
+        ))
+        
+        print(f"INFO: Collecting resource usage for {len(sessions)} sessions")
+        
+        active_states = ['idle', 'busy', 'starting']
+        resource_count = 0
+        
+        for session_data in sessions:
+            session_id = session_data.get('SessionId')
+            app_id = session_data.get('ApplicationId')
+            state = session_data.get('State')
+            item_type = session_data.get('ItemType')
+            item_id = session_data.get('ItemId')
+            item_name = session_data.get('ItemName')
+            
+            # Only collect resource usage for active sessions with application IDs
+            if not app_id:
+                continue
+            
+            if state not in active_states:
+                continue
+            
+            # Collect resource usage for this session
+            for resource_metric in collect_spark_resource_usage(
+                workspace_id=workspace_id,
+                application_id=app_id,
+                session_id=session_id,
+                item_type=item_type,
+                item_id=item_id,
+                item_name=item_name
+            ):
+                yield resource_metric
+                resource_count += 1
+        
+        if resource_count > 0:
+            print(f"SUCCESS: Collected {resource_count} resource usage metrics from {len(sessions)} sessions")
+        
+    except Exception as e:
+        print(f"ERROR: collecting batch resource usage: {str(e)}")
+
 
 def collect_spark_applications_workspace(
     workspace_id: str, 
@@ -1556,24 +2291,24 @@ def collect_spark_applications_workspace(
         # Get all Spark applications in workspace
         url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/spark/sessions"
         
-        print(f"🔍 Collecting Spark applications for workspace {workspace_id}")
+        print(f"INFO: Collecting Spark applications for workspace {workspace_id}")
         
         response = requests.get(url, headers=headers, timeout=30)
         data = handle_api_response(response, f"Workspace Spark Applications - {workspace_id}")
         
         if not data or "value" not in data:
-            print("⚠️ No Spark applications found in workspace")
+            print("WARNING: No Spark applications found in workspace")
             return
             
         sessions = data["value"]
-        print(f"📊 Found {len(sessions)} Spark sessions")
+        print(f"Found {len(sessions)} Spark sessions")
         
-        cutoff_time = datetime.utcnow() - timedelta(hours=lookback_hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
         collected_count = 0
         
         for session in sessions:
             if collected_count >= max_items:
-                print(f"⚠️ Reached max items limit ({max_items})")
+                print(f"WARNING: Reached max items limit ({max_items})")
                 break
                 
             try:
@@ -1608,13 +2343,13 @@ def collect_spark_applications_workspace(
                 collected_count += 1
                 
             except Exception as e:
-                print(f"⚠️ Error processing session {session.get('id', 'unknown')}: {str(e)}")
+                print(f"WARNING: Error processing session {session.get('id', 'unknown')}: {str(e)}")
                 continue
                 
-        print(f"✅ Collected {collected_count} Spark applications")
+        print(f"SUCCESS: Collected {collected_count} Spark applications")
         
     except Exception as e:
-        print(f"❌ Error collecting workspace Spark applications: {str(e)}")
+        print(f"ERROR: collecting workspace Spark applications: {str(e)}")
 
 
 def collect_spark_applications_item(
@@ -1653,22 +2388,22 @@ def collect_spark_applications_item(
         
         url = endpoint_map.get(item_type.lower())
         if not url:
-            print(f"❌ Unsupported item type: {item_type}")
+            print(f"ERROR: Unsupported item type: {item_type}")
             return
             
-        print(f"🔍 Collecting Spark applications for {item_type} {item_id}")
+        print(f"INFO: Collecting Spark applications for {item_type} {item_id}")
         
         response = requests.get(url, headers=headers, timeout=30)
         data = handle_api_response(response, f"{item_type} Spark Applications - {item_id}")
         
         if not data or "value" not in data:
-            print(f"⚠️ No Spark applications found for {item_type} {item_id}")
+            print(f"WARNING: No Spark applications found for {item_type} {item_id}")
             return
             
         sessions = data["value"]
-        print(f"📊 Found {len(sessions)} Spark sessions for {item_type}")
+        print(f"Found {len(sessions)} Spark sessions for {item_type}")
         
-        cutoff_time = datetime.utcnow() - timedelta(hours=lookback_hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
         collected_count = 0
         
         for session in sessions:
@@ -1708,13 +2443,13 @@ def collect_spark_applications_item(
                 collected_count += 1
                 
             except Exception as e:
-                print(f"⚠️ Error processing session {session.get('id', 'unknown')}: {str(e)}")
+                print(f"WARNING: Error processing session {session.get('id', 'unknown')}: {str(e)}")
                 continue
                 
-        print(f"✅ Collected {collected_count} Spark applications for {item_type}")
+        print(f"SUCCESS: Collected {collected_count} Spark applications for {item_type}")
         
     except Exception as e:
-        print(f"❌ Error collecting {item_type} Spark applications: {str(e)}")
+        print(f"ERROR: collecting {item_type} Spark applications: {str(e)}")
 
 
 def collect_spark_logs(
@@ -1751,10 +2486,10 @@ def collect_spark_logs(
         
         url = endpoint_map.get(log_type.lower())
         if not url:
-            print(f"❌ Unsupported log type: {log_type}")
+            print(f"ERROR: Unsupported log type: {log_type}")
             return
             
-        print(f"🔍 Collecting {log_type} logs for session {session_id}")
+        print(f"INFO: Collecting {log_type} logs for session {session_id}")
         
         response = requests.get(url, headers=headers, timeout=60)
         
@@ -1762,7 +2497,7 @@ def collect_spark_logs(
             log_content = response.text
             log_lines = log_content.split('\n')
             
-            print(f"📊 Found {len(log_lines)} log lines")
+            print(f"Found {len(log_lines)} log lines")
             
             for i, line in enumerate(log_lines[-max_lines:], 1):  # Get last N lines
                 if line.strip():
@@ -1777,10 +2512,10 @@ def collect_spark_logs(
                     }
                     
         else:
-            print(f"⚠️ Failed to get {log_type} logs: {response.status_code}")
+            print(f"WARNING: Failed to get {log_type} logs: {response.status_code}")
             
     except Exception as e:
-        print(f"❌ Error collecting {log_type} logs: {str(e)}")
+        print(f"ERROR: collecting {log_type} logs: {str(e)}")
 
 
 def collect_spark_metrics(
@@ -1817,7 +2552,7 @@ def collect_spark_metrics(
             "storage": f"{base_url}/storage/rdd"
         }
         
-        print(f"🔍 Collecting Spark metrics for application {application_id}")
+        print(f"INFO: Collecting Spark metrics for application {application_id}")
         
         for metric_type, url in metrics_endpoints.items():
             try:
@@ -1892,16 +2627,16 @@ def collect_spark_metrics(
                                 }
                                 
                 else:
-                    print(f"⚠️ Failed to get {metric_type} metrics: {response.status_code}")
+                    print(f"WARNING: Failed to get {metric_type} metrics: {response.status_code}")
                     
             except Exception as e:
-                print(f"⚠️ Error collecting {metric_type} metrics: {str(e)}")
+                print(f"WARNING: Error collecting {metric_type} metrics: {str(e)}")
                 continue
                 
-        print(f"✅ Collected Spark metrics for application {application_id}")
+        print(f"SUCCESS: Collected Spark metrics for application {application_id}")
         
     except Exception as e:
-        print(f"❌ Error collecting Spark metrics: {str(e)}")
+        print(f"ERROR: collecting Spark metrics: {str(e)}")
 
 
 def get_spark_session_details(
@@ -1945,9 +2680,9 @@ def get_spark_session_details(
         if response.status_code == 200:
             return response.json()
         else:
-            print(f"⚠️ Failed to get session details for {session_id}: {response.status_code}")
+            print(f"WARNING: Failed to get session details for {session_id}: {response.status_code}")
             return {}
             
     except Exception as e:
-        print(f"⚠️ Error getting session details for {session_id}: {str(e)}")
+        print(f"WARNING: Error getting session details for {session_id}: {str(e)}")
         return {}

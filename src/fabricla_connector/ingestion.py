@@ -30,7 +30,7 @@ def post_rows_to_dcr(
     Post records to Azure Monitor using DCR with chunking and retry logic.
     """
     if not records:
-        print("[Ingestion] ⚠️  No records to ingest")
+        print("[Ingestion] WARNING:  No records to ingest")
         return {"status": "skipped", "message": "No records provided", "ingested_count": 0}
     
     print(f"[Ingestion] Starting ingestion of {len(records)} records")
@@ -42,7 +42,7 @@ def post_rows_to_dcr(
     try:
         credential = DefaultAzureCredential()
         client = LogsIngestionClient(endpoint=dce_endpoint, credential=credential)
-        print(f"[Ingestion] ✅ Created logs ingestion client")
+        print(f"[Ingestion] SUCCESS: Created logs ingestion client")
     except Exception as e:
         return {"status": "error", "message": f"Failed to create client: {e}", "ingested_count": 0}
     
@@ -64,7 +64,7 @@ def post_rows_to_dcr(
                     logs=chunk
                 )
                 
-                print(f"[Ingestion] ✅ Chunk {chunk_idx + 1} ingested successfully ({chunk_size_actual} records)")
+                print(f"[Ingestion] SUCCESS: Chunk {chunk_idx + 1} ingested successfully ({chunk_size_actual} records)")
                 total_ingested += chunk_size_actual
                 break
                 
@@ -75,11 +75,11 @@ def post_rows_to_dcr(
                 # Handle specific error types
                 if "429" in error_msg or "rate limit" in error_msg.lower():
                     wait_time = min(60 * (2 ** retry_count), 300)  # Exponential backoff, max 5 min
-                    print(f"[Ingestion] ⚠️  Rate limited. Waiting {wait_time}s before retry {retry_count}/{max_retries}")
+                    print(f"[Ingestion] WARNING:  Rate limited. Waiting {wait_time}s before retry {retry_count}/{max_retries}")
                     time.sleep(wait_time)
                 elif "413" in error_msg or "too large" in error_msg.lower():
                     if chunk_size_actual > 1:
-                        print(f"[Ingestion] ⚠️  Chunk too large. Splitting into smaller chunks")
+                        print(f"[Ingestion] WARNING:  Chunk too large. Splitting into smaller chunks")
                         # Split chunk in half and retry
                         mid = chunk_size_actual // 2
                         smaller_chunks = [chunk[:mid], chunk[mid:]]
@@ -92,17 +92,17 @@ def post_rows_to_dcr(
                                     logs=small_chunk
                                 )
                                 total_ingested += len(small_chunk)
-                                print(f"[Ingestion] ✅ Small chunk ingested ({len(small_chunk)} records)")
+                                print(f"[Ingestion] SUCCESS: Small chunk ingested ({len(small_chunk)} records)")
                             except Exception as small_e:
-                                print(f"[Ingestion] ❌ Small chunk failed: {small_e}")
+                                print(f"[Ingestion] ERROR: Small chunk failed: {small_e}")
                                 failed_chunks.append({"chunk": chunk_idx, "size": len(small_chunk), "error": str(small_e)})
                         break
                     else:
-                        print(f"[Ingestion] ❌ Single record too large: {error_msg}")
+                        print(f"[Ingestion] ERROR: Single record too large: {error_msg}")
                         failed_chunks.append({"chunk": chunk_idx, "size": 1, "error": error_msg})
                         break
                 else:
-                    print(f"[Ingestion] ❌ Chunk {chunk_idx + 1} failed (attempt {retry_count}/{max_retries}): {error_msg}")
+                    print(f"[Ingestion] ERROR: Chunk {chunk_idx + 1} failed (attempt {retry_count}/{max_retries}): {error_msg}")
                     
                     if retry_count <= max_retries:
                         wait_time = min(30 * retry_count, 120)  # Linear backoff, max 2 min
@@ -123,9 +123,9 @@ def post_rows_to_dcr(
         "failed_chunks": failed_chunks
     }
     
-    print(f"[Ingestion] 📊 Summary: {total_ingested}/{len(records)} records ingested ({success_rate:.1f}%)")
+    print(f"[Ingestion] Found Summary: {total_ingested}/{len(records)} records ingested ({success_rate:.1f}%)")
     if failed_chunks:
-        print(f"[Ingestion] ⚠️  {len(failed_chunks)} chunks failed")
+        print(f"[Ingestion] WARNING:  {len(failed_chunks)} chunks failed")
     
     return result
 

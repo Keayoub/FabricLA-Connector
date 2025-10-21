@@ -1,0 +1,152 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "dcrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Data Collection Rule for Admin monitoring"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the DCR"
+      }
+    },
+    "dceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Data Collection Endpoint"
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Log Analytics Workspace"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2022-06-01",
+      "name": "[parameters('dcrName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "dataCollectionEndpointId": "[parameters('dceResourceId')]",
+        "description": "Data Collection Rule for Fabric Admin & Governance Monitoring (Git, Permissions, Lineage, ML/AI)",
+        "streamDeclarations": {
+          "Custom-FabricGitIntegration_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "GitProvider", "type": "string" },
+              { "name": "RepositoryUrl", "type": "string" },
+              { "name": "Branch", "type": "string" }
+            ]
+          },
+          "Custom-FabricPermissions_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "PrincipalId", "type": "string" },
+              { "name": "PrincipalType", "type": "string" },
+              { "name": "Role", "type": "string" }
+            ]
+          },
+          "Custom-FabricDataLineage_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "SourceItemId", "type": "string" },
+              { "name": "TargetItemId", "type": "string" },
+              { "name": "LineageType", "type": "string" }
+            ]
+          },
+          "Custom-FabricSemanticModels_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "ModelId", "type": "string" },
+              { "name": "ModelName", "type": "string" }
+            ]
+          },
+          "Custom-FabricRealTimeIntelligence_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "EventType", "type": "string" },
+              { "name": "EventData", "type": "dynamic" }
+            ]
+          },
+          "Custom-FabricMirroring_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "MirrorId", "type": "string" },
+              { "name": "SourceType", "type": "string" },
+              { "name": "Status", "type": "string" }
+            ]
+          }
+        },
+        "destinations": {
+          "logAnalytics": [
+            {
+              "workspaceResourceId": "[parameters('lawResourceId')]",
+              "name": "laDest"
+            }
+          ]
+        },
+        "dataFlows": [
+          {
+            "streams": ["Custom-FabricGitIntegration_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricGitIntegration_CL"
+          },
+          {
+            "streams": ["Custom-FabricPermissions_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricPermissions_CL"
+          },
+          {
+            "streams": ["Custom-FabricDataLineage_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricDataLineage_CL"
+          },
+          {
+            "streams": ["Custom-FabricSemanticModels_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricSemanticModels_CL"
+          },
+          {
+            "streams": ["Custom-FabricRealTimeIntelligence_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricRealTimeIntelligence_CL"
+          },
+          {
+            "streams": ["Custom-FabricMirroring_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricMirroring_CL"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "dcrImmutableId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))).immutableId]"
+    },
+    "dcrResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
+    }
+  }
+}

@@ -14,13 +14,13 @@ def acquire_token(tenant: str, client_id: str, client_secret: str, scope: str) -
     app = msal.ConfidentialClientApplication(client_id, authority=authority, client_credential=client_secret)
     result = app.acquire_token_for_client(scopes=[scope])
     if not result or "access_token" not in result:
-        print(f"❌ Token acquisition failed for {scope}")
+        print(f"ERROR: Token acquisition failed for {scope}")
         print(f"   Error: {result.get('error', 'Unknown error')}")
         print(f"   Description: {result.get('error_description', 'No description')}")
         raise RuntimeError(f"Failed to acquire token: {result}")
     
     token = result["access_token"]
-    print(f"✅ Token acquired for {scope}: {token[:10]}...{token[-10:]}")
+    print(f"SUCCESS: Token acquired for {scope}: {token[:10]}...{token[-10:]}")
     return token
 
 def acquire_token_managed_identity(scope: str) -> str:
@@ -28,7 +28,7 @@ def acquire_token_managed_identity(scope: str) -> str:
     try:
         credential = ManagedIdentityCredential()
         token = credential.get_token(scope)
-        print(f"✅ Managed identity token acquired for {scope}: {token.token[:10]}...{token.token[-10:]}")
+        print(f"SUCCESS: Managed identity token acquired for {scope}: {token.token[:10]}...{token.token[-10:]}")
         return token.token
     except Exception as e:
         raise RuntimeError(f"Failed to get managed identity token for {scope}: {e}")
@@ -49,10 +49,10 @@ def get_fabric_token(scope: str = "https://api.fabric.microsoft.com/.default") -
         # Use Fabric's credential system if available
         token = notebookutils.credentials.getSecret("System", "AccessToken")
         if token:
-            print(f"[Auth] ✅ Successfully acquired token via Fabric workspace identity")
+            print(f"[Auth] SUCCESS: Successfully acquired token via Fabric workspace identity")
             return token
         else:
-            print(f"[Auth] ⚠️  Fabric workspace token not available, falling back to service principal")
+            print(f"[Auth] WARNING:  Fabric workspace token not available, falling back to service principal")
             
     except (ImportError, AttributeError, Exception) as e:
         print(f"[Auth] Fabric authentication not available: {str(e)[:100]}")
@@ -83,7 +83,7 @@ def get_credentials_fabric_aware() -> Tuple[Optional[str], Optional[str], Option
             fabric_secret = notebookutils.credentials.getSecret("Fabric", "ClientSecret")
             
             if fabric_tenant and fabric_client_id:
-                print("[Auth] ✅ Using credentials from Fabric Key Vault integration")
+                print("[Auth] SUCCESS: Using credentials from Fabric Key Vault integration")
                 return fabric_tenant, fabric_client_id, fabric_secret, True
                 
         except Exception as e:
@@ -103,19 +103,19 @@ def get_credentials_fabric_aware() -> Tuple[Optional[str], Optional[str], Option
         if not final_client_id: missing.append("client_id/FABRIC_APP_ID")
         if not final_secret: missing.append("client_secret/FABRIC_APP_SECRET")
         
-        print(f"[Auth] ❌ Missing credentials: {', '.join(missing)}")
+        print(f"[Auth] ERROR: Missing credentials: {', '.join(missing)}")
         if running_in_fabric:
-            print("[Auth] 💡 In Fabric, you can:")
+            print("[Auth] TIP: In Fabric, you can:")
             print("       1. Set up Key Vault integration with secrets named 'TenantId', 'ClientId', 'ClientSecret'")
             print("       2. Set values directly in environment variables")
             print("       3. Use workspace managed identity (if configured)")
         else:
-            print("[Auth] 💡 Set missing values in your .env file")
+            print("[Auth] TIP: Set missing values in your .env file")
             
         return None, None, None, False
     
     auth_source = "Fabric Key Vault" if running_in_fabric else "Environment Variables"
-    print(f"[Auth] ✅ Using credentials from {auth_source}")
+    print(f"[Auth] SUCCESS: Using credentials from {auth_source}")
     return final_tenant, final_client_id, final_secret, running_in_fabric
 
 def get_secret_from_key_vault(vault_uri: str, secret_name: str) -> str:
