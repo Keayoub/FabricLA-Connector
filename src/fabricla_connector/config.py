@@ -196,23 +196,23 @@ def print_config_status():
     config = get_config()
     validation = validate_config()
     
-    print("🔧 Configuration Status")
+    print("FIXING: Configuration Status")
     print("=" * 50)
     print(f"Environment: {validation['environment']}")
     print(f"Fabric Available: {validation['fabric_available']}")
-    print(f"Valid: {'✅' if validation['valid'] else '❌'}")
+    print(f"Valid: {'SUCCESS:' if validation['valid'] else 'ERROR:'}")
     
     if validation['missing_required']:
-        print(f"\n❌ Missing Required:")
+        print(f"\nERROR: Missing Required:")
         for item in validation['missing_required']:
             print(f"   - {item}")
     
     if validation['missing_optional']:
-        print(f"\n⚠️  Missing Optional:")
+        print(f"\nWARNING:  Missing Optional:")
         for item in validation['missing_optional']:
             print(f"   - {item}")
     
-    print(f"\n📊 Configuration Summary:")
+    print(f"\nFound Configuration Summary:")
     for key, value in config.items():
         if 'secret' in key.lower() or 'password' in key.lower():
             display_value = f"{'*' * len(value) if value else 'Not Set'}"

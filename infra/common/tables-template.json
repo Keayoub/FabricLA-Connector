@@ -566,6 +566,135 @@
           ]
         }
       }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricSparkLivySession_CL')]",
+      "properties": {
+        "plan": "Analytics",
+        "retentionInDays": 30,
+        "schema": {
+          "name": "FabricSparkLivySession_CL",
+          "columns": [
+            { "name": "TimeGenerated", "type": "datetime" },
+            { "name": "WorkspaceId", "type": "string" },
+            { "name": "SessionId", "type": "string" },
+            { "name": "ApplicationId", "type": "string" },
+            { "name": "ItemType", "type": "string" },
+            { "name": "ItemId", "type": "string" },
+            { "name": "ItemName", "type": "string" },
+            { "name": "Owner", "type": "string" },
+            { "name": "ProxyUser", "type": "string" },
+            { "name": "Kind", "type": "string" },
+            { "name": "State", "type": "string" },
+            { "name": "DriverLogUrl", "type": "string" },
+            { "name": "SparkUiUrl", "type": "string" },
+            { "name": "SessionLogs", "type": "dynamic" },
+            { "name": "CreatedTime", "type": "datetime" },
+            { "name": "LastUpdatedTime", "type": "datetime" },
+            { "name": "WorkspaceName", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricSparkLogs_CL')]",
+      "properties": {
+        "plan": "Analytics",
+        "retentionInDays": 30,
+        "schema": {
+          "name": "FabricSparkLogs_CL",
+          "columns": [
+            { "name": "TimeGenerated", "type": "datetime" },
+            { "name": "WorkspaceId", "type": "string" },
+            { "name": "SessionId", "type": "string" },
+            { "name": "ApplicationId", "type": "string" },
+            { "name": "LogType", "type": "string" },
+            { "name": "ExecutorId", "type": "string" },
+            { "name": "LogLevel", "type": "string" },
+            { "name": "LogMessage", "type": "string" },
+            { "name": "LogTimestamp", "type": "datetime" },
+            { "name": "SequenceNumber", "type": "int" },
+            { "name": "ItemType", "type": "string" },
+            { "name": "ItemId", "type": "string" },
+            { "name": "ItemName", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricSparkHistoryMetrics_CL')]",
+      "properties": {
+        "plan": "Analytics",
+        "retentionInDays": 30,
+        "schema": {
+          "name": "FabricSparkHistoryMetrics_CL",
+          "columns": [
+            { "name": "TimeGenerated", "type": "datetime" },
+            { "name": "WorkspaceId", "type": "string" },
+            { "name": "ApplicationId", "type": "string" },
+            { "name": "SessionId", "type": "string" },
+            { "name": "MetricType", "type": "string" },
+            { "name": "JobId", "type": "int" },
+            { "name": "StageId", "type": "int" },
+            { "name": "ExecutorId", "type": "string" },
+            { "name": "Status", "type": "string" },
+            { "name": "StartTime", "type": "datetime" },
+            { "name": "EndTime", "type": "datetime" },
+            { "name": "DurationMs", "type": "long" },
+            { "name": "TaskCount", "type": "int" },
+            { "name": "SuccessfulTasks", "type": "int" },
+            { "name": "FailedTasks", "type": "int" },
+            { "name": "ShuffleReadBytes", "type": "long" },
+            { "name": "ShuffleWriteBytes", "type": "long" },
+            { "name": "MemoryUsed", "type": "long" },
+            { "name": "DiskUsed", "type": "long" }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricSparkResourceUsage_CL')]",
+      "properties": {
+        "plan": "Analytics",
+        "retentionInDays": 30,
+        "schema": {
+          "name": "FabricSparkResourceUsage_CL",
+          "columns": [
+            { "name": "TimeGenerated", "type": "datetime" },
+            { "name": "WorkspaceId", "type": "string" },
+            { "name": "SessionId", "type": "string" },
+            { "name": "ApplicationId", "type": "string" },
+            { "name": "ItemType", "type": "string" },
+            { "name": "ItemId", "type": "string" },
+            { "name": "ItemName", "type": "string" },
+            { "name": "ResourceType", "type": "string" },
+            { "name": "ExecutorId", "type": "string" },
+            { "name": "CpuUsagePercent", "type": "real" },
+            { "name": "MemoryUsedMB", "type": "long" },
+            { "name": "MemoryTotalMB", "type": "long" },
+            { "name": "MemoryUsagePercent", "type": "real" },
+            { "name": "DiskUsedMB", "type": "long" },
+            { "name": "DiskTotalMB", "type": "long" },
+            { "name": "NetworkReadMB", "type": "long" },
+            { "name": "NetworkWriteMB", "type": "long" },
+            { "name": "GcTimeMs", "type": "long" },
+            { "name": "TasksActive", "type": "int" },
+            { "name": "TasksCompleted", "type": "int" },
+            { "name": "TasksFailed", "type": "int" },
+            { "name": "ShuffleReadMB", "type": "long" },
+            { "name": "ShuffleWriteMB", "type": "long" },
+            { "name": "Timestamp", "type": "datetime" }
+          ]
+        }
+      }
     }
   ]
 }

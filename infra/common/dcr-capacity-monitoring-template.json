@@ -1,0 +1,172 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "dcrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Data Collection Rule for Capacity monitoring"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the DCR"
+      }
+    },
+    "dceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Data Collection Endpoint"
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Log Analytics Workspace"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2022-06-01",
+      "name": "[parameters('dcrName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "dataCollectionEndpointId": "[parameters('dceResourceId')]",
+        "description": "Data Collection Rule for Fabric Capacity & Workspace Monitoring",
+        "streamDeclarations": {
+          "Custom-FabricDatasetRefresh_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "DatasetId", "type": "string" },
+              { "name": "RefreshId", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTime", "type": "datetime" },
+              { "name": "EndTime", "type": "datetime" }
+            ]
+          },
+          "Custom-FabricDatasetMetadata_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "DatasetId", "type": "string" },
+              { "name": "DatasetName", "type": "string" },
+              { "name": "TableCount", "type": "int" },
+              { "name": "SizeMB", "type": "long" }
+            ]
+          },
+          "Custom-FabricCapacityMetrics_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "CapacityId", "type": "string" },
+              { "name": "CapacityName", "type": "string" },
+              { "name": "MetricName", "type": "string" },
+              { "name": "MetricValue", "type": "real" },
+              { "name": "Unit", "type": "string" }
+            ]
+          },
+          "Custom-FabricCapacityWorkloads_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "CapacityId", "type": "string" },
+              { "name": "WorkloadType", "type": "string" },
+              { "name": "CpuUsagePercent", "type": "real" },
+              { "name": "MemoryUsageMB", "type": "long" }
+            ]
+          },
+          "Custom-FabricWorkspaceEvents_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "EventType", "type": "string" },
+              { "name": "EventData", "type": "dynamic" }
+            ]
+          },
+          "Custom-FabricItemDetails_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "ItemId", "type": "string" },
+              { "name": "ItemName", "type": "string" },
+              { "name": "ItemType", "type": "string" }
+            ]
+          },
+          "Custom-FabricOneLakeStorage_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "StoragePath", "type": "string" },
+              { "name": "SizeMB", "type": "long" },
+              { "name": "FileCount", "type": "int" }
+            ]
+          }
+        },
+        "destinations": {
+          "logAnalytics": [
+            {
+              "workspaceResourceId": "[parameters('lawResourceId')]",
+              "name": "laDest"
+            }
+          ]
+        },
+        "dataFlows": [
+          {
+            "streams": ["Custom-FabricDatasetRefresh_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricDatasetRefresh_CL"
+          },
+          {
+            "streams": ["Custom-FabricDatasetMetadata_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricDatasetMetadata_CL"
+          },
+          {
+            "streams": ["Custom-FabricCapacityMetrics_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricCapacityMetrics_CL"
+          },
+          {
+            "streams": ["Custom-FabricCapacityWorkloads_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricCapacityWorkloads_CL"
+          },
+          {
+            "streams": ["Custom-FabricWorkspaceEvents_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricWorkspaceEvents_CL"
+          },
+          {
+            "streams": ["Custom-FabricItemDetails_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricItemDetails_CL"
+          },
+          {
+            "streams": ["Custom-FabricOneLakeStorage_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricOneLakeStorage_CL"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "dcrImmutableId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))).immutableId]"
+    },
+    "dcrResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
+    }
+  }
+}

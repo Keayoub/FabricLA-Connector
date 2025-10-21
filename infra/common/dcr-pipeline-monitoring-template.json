@@ -1,0 +1,138 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "dcrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Data Collection Rule for Pipeline & Dataflow monitoring"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the DCR"
+      }
+    },
+    "dceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Data Collection Endpoint"
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the Log Analytics Workspace"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2022-06-01",
+      "name": "[parameters('dcrName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "dataCollectionEndpointId": "[parameters('dceResourceId')]",
+        "description": "Data Collection Rule for Fabric Pipeline & Dataflow Monitoring",
+        "streamDeclarations": {
+          "Custom-FabricPipelineRun_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "PipelineId", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "PipelineName", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTime", "type": "datetime" },
+              { "name": "EndTime", "type": "datetime" },
+              { "name": "DurationSeconds", "type": "int" }
+            ]
+          },
+          "Custom-FabricPipelineActivityRun_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "PipelineId", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "ActivityName", "type": "string" },
+              { "name": "ActivityType", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTime", "type": "datetime" },
+              { "name": "EndTime", "type": "datetime" }
+            ]
+          },
+          "Custom-FabricDataflowRun_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "DataflowId", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "DataflowName", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "StartTime", "type": "datetime" },
+              { "name": "EndTime", "type": "datetime" },
+              { "name": "RowsProcessed", "type": "long" }
+            ]
+          },
+          "Custom-FabricUserActivity_CL": {
+            "columns": [
+              { "name": "TimeGenerated", "type": "datetime" },
+              { "name": "WorkspaceId", "type": "string" },
+              { "name": "UserId", "type": "string" },
+              { "name": "UserEmail", "type": "string" },
+              { "name": "Activity", "type": "string" },
+              { "name": "ItemType", "type": "string" },
+              { "name": "ItemId", "type": "string" }
+            ]
+          }
+        },
+        "destinations": {
+          "logAnalytics": [
+            {
+              "workspaceResourceId": "[parameters('lawResourceId')]",
+              "name": "laDest"
+            }
+          ]
+        },
+        "dataFlows": [
+          {
+            "streams": ["Custom-FabricPipelineRun_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricPipelineRun_CL"
+          },
+          {
+            "streams": ["Custom-FabricPipelineActivityRun_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricPipelineActivityRun_CL"
+          },
+          {
+            "streams": ["Custom-FabricDataflowRun_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricDataflowRun_CL"
+          },
+          {
+            "streams": ["Custom-FabricUserActivity_CL"],
+            "destinations": ["laDest"],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricUserActivity_CL"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "dcrImmutableId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))).immutableId]"
+    },
+    "dcrResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
+    }
+  }
+}
