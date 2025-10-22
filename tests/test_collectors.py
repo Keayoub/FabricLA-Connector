@@ -92,18 +92,13 @@ class TestPipelineDataCollector(unittest.TestCase):
         self.mock_token = TestHelpers.mock_fabric_token()
         
     @unittest.skipIf(not FRAMEWORK_AVAILABLE, f"Framework not available: {framework_import_error}")
-    @patch('fabricla_connector.collectors.list_item_job_instances')
-    @patch('fabricla_connector.collectors.get_fabric_token')
-    @patch('fabricla_connector.collectors.requests.get')
-    def test_collect_pipeline_runs_success(self, mock_get, mock_token, mock_job_instances):
+    @patch('fabricla_connector.collectors.base.FabricAPIClient')
+    def test_collect_pipeline_runs_success(self, mock_client_class):
         """Test successful pipeline run collection."""
-        # Setup mocks
-        mock_token.return_value = self.mock_token
-        mock_response = TestHelpers.mock_api_response({
-            "value": [MockData.PIPELINE_ITEM]
-        })
-        mock_get.return_value = mock_response
-        mock_job_instances.return_value = [MockData.PIPELINE_RUN]
+        # Setup mocks - create a mock client instance
+        mock_client = mock_client_class.return_value
+        mock_client.list_workspace_items.return_value = [MockData.PIPELINE_ITEM]
+        mock_client.list_item_job_instances.return_value = [MockData.PIPELINE_RUN]
         
         # Create collector and collect data
         collector = PipelineDataCollector(
@@ -123,16 +118,12 @@ class TestPipelineDataCollector(unittest.TestCase):
         self.assertIn('TimeGenerated', run)
         
     @unittest.skipIf(not FRAMEWORK_AVAILABLE, f"Framework not available: {framework_import_error}")
-    @patch('fabricla_connector.collectors.get_fabric_token')
-    @patch('fabricla_connector.collectors.requests.get')
-    def test_collect_activity_runs_success(self, mock_get, mock_token):
+    @patch('fabricla_connector.collectors.base.FabricAPIClient')
+    def test_collect_activity_runs_success(self, mock_client_class):
         """Test successful activity run collection."""
-        # Setup mocks
-        mock_token.return_value = self.mock_token
-        mock_response = TestHelpers.mock_api_response({
-            "value": [MockData.ACTIVITY_RUN]
-        })
-        mock_get.return_value = mock_response
+        # Setup mock - create a mock client instance
+        mock_client = mock_client_class.return_value
+        mock_client.get_activity_runs.return_value = [MockData.ACTIVITY_RUN]
         
         # Create collector and collect data
         collector = PipelineDataCollector(
@@ -164,18 +155,17 @@ class TestDatasetRefreshCollector(unittest.TestCase):
         self.mock_token = TestHelpers.mock_fabric_token()
         
     @unittest.skipIf(not FRAMEWORK_AVAILABLE, f"Framework not available: {framework_import_error}")
-    @patch('fabricla_connector.collectors.get_fabric_token')
-    @patch('fabricla_connector.collectors.list_workspace_datasets')
-    @patch('fabricla_connector.collectors.get_dataset_refresh_history')
-    def test_collect_dataset_refreshes(self, mock_refreshes, mock_datasets, mock_token):
+    @patch('fabricla_connector.collectors.base.FabricAPIClient')
+    def test_collect_dataset_refreshes(self, mock_client_class):
         """Test dataset refresh collection."""
-        # Setup mocks
-        mock_token.return_value = self.mock_token
-        mock_datasets.return_value = [{
+        # Setup mocks - create a mock client instance
+        mock_client = mock_client_class.return_value
+        mock_client.list_datasets.return_value = [{
             'id': self.dataset_id,
-            'displayName': 'Test Dataset'
+            'displayName': 'Test Dataset',
+            'type': 'SemanticModel'
         }]
-        mock_refreshes.return_value = [MockData.DATASET_REFRESH]
+        mock_client.get_dataset_refreshes.return_value = [MockData.DATASET_REFRESH]
         
         # Create collector and collect data
         collector = DatasetRefreshCollector(
@@ -203,13 +193,12 @@ class TestCapacityUtilizationCollector(unittest.TestCase):
         self.mock_token = TestHelpers.mock_fabric_token()
         
     @unittest.skipIf(not FRAMEWORK_AVAILABLE, f"Framework not available: {framework_import_error}")
-    @patch('fabricla_connector.collectors.get_fabric_token')
-    @patch('fabricla_connector.collectors.get_capacity_utilization')
-    def test_collect_capacity_metrics(self, mock_utilization, mock_token):
+    @patch('fabricla_connector.collectors.base.FabricAPIClient')
+    def test_collect_capacity_metrics(self, mock_client_class):
         """Test capacity metrics collection."""
-        # Setup mocks
-        mock_token.return_value = self.mock_token
-        mock_utilization.return_value = MockData.CAPACITY_METRICS['value']
+        # Setup mock - create a mock client instance
+        mock_client = mock_client_class.return_value
+        mock_client.get_capacity_utilization.return_value = MockData.CAPACITY_METRICS['value']
         
         # Create collector and collect data
         collector = CapacityUtilizationCollector(
@@ -236,13 +225,12 @@ class TestUserActivityCollector(unittest.TestCase):
         self.mock_token = TestHelpers.mock_fabric_token()
         
     @unittest.skipIf(not FRAMEWORK_AVAILABLE, f"Framework not available: {framework_import_error}")
-    @patch('fabricla_connector.collectors.get_fabric_token')
-    @patch('fabricla_connector.collectors.get_user_activity')
-    def test_collect_user_activities(self, mock_activity, mock_token):
+    @patch('fabricla_connector.collectors.base.FabricAPIClient')
+    def test_collect_user_activities(self, mock_client_class):
         """Test user activity collection."""
-        # Setup mocks
-        mock_token.return_value = self.mock_token
-        mock_activity.return_value = MockData.USER_ACTIVITY['value']
+        # Setup mock - create a mock client instance
+        mock_client = mock_client_class.return_value
+        mock_client.get_user_activities.return_value = MockData.USER_ACTIVITY['value']
         
         # Create collector and collect data
         collector = UserActivityCollector(

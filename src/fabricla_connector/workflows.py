@@ -6,6 +6,7 @@ This module provides intelligent workflows for comprehensive monitoring.
 import logging
 from typing import List, Dict, Any, Optional
 from azure.identity import DefaultAzureCredential
+# Import collectors from collectors subpackage
 from .collectors import (
     PipelineDataCollector,
     DatasetRefreshCollector,
@@ -16,7 +17,13 @@ from .collectors import (
     NotebookCollector,
     GitIntegrationCollector,
 )
-from .ingestion import post_rows_to_dcr, FabricIngestion, post_rows_to_dcr_enhanced, create_troubleshooting_report_legacy
+from .ingestion import post_rows_to_dcr, AzureMonitorIngestionClient
+
+# TODO: Refactor these helper functions into new ingestion module
+# Fallback implementations (legacy_ingestion.py was removed)
+post_rows_to_dcr_enhanced = post_rows_to_dcr
+create_troubleshooting_report_legacy = lambda *args, **kwargs: {"status": "not_implemented", "message": "Troubleshooting report not yet implemented in refactored ingestion"}
+
 from .config import get_config, get_ingestion_config, get_fabric_config, validate_config, get_monitoring_config
 from .api import get_fabric_token
 
