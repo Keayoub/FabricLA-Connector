@@ -56,8 +56,8 @@ def mock_workspace_config_minimal():
 
 def test_collect_workspace_config_success(mock_workspace_config_response):
     """Test successful workspace configuration collection"""
-    with patch('fabricla_connector.collectors.get_fabric_token') as mock_token, \
-         patch('fabricla_connector.collectors.requests.get') as mock_get:
+    with patch('fabricla_connector.api.get_fabric_token') as mock_token, \
+         patch('fabricla_connector.collectors.permissions.requests.get') as mock_get:
         
         mock_token.return_value = "test-token"
         
@@ -107,8 +107,8 @@ def test_collect_workspace_config_success(mock_workspace_config_response):
 
 def test_collect_workspace_config_fallback(mock_workspace_config_minimal):
     """Test workspace config collection with non-admin fallback"""
-    with patch('fabricla_connector.collectors.get_fabric_token') as mock_token, \
-         patch('fabricla_connector.collectors.requests.get') as mock_get:
+    with patch('fabricla_connector.api.get_fabric_token') as mock_token, \
+         patch('fabricla_connector.collectors.permissions.requests.get') as mock_get:
         
         mock_token.return_value = "test-token"
         
@@ -139,8 +139,8 @@ def test_collect_workspace_config_fallback(mock_workspace_config_minimal):
 
 def test_collect_workspace_config_error_handling():
     """Test error handling in workspace config collection"""
-    with patch('fabricla_connector.collectors.get_fabric_token') as mock_token, \
-         patch('fabricla_connector.collectors.requests.get') as mock_get:
+    with patch('fabricla_connector.api.get_fabric_token') as mock_token, \
+         patch('fabricla_connector.collectors.permissions.requests.get') as mock_get:
         
         mock_token.return_value = "test-token"
         
@@ -159,9 +159,9 @@ def test_collect_workspace_config_error_handling():
 
 def test_collect_and_ingest_workspace_config_workflow():
     """Test complete workflow for workspace config collection and ingestion"""
-    with patch('fabricla_connector.workflows.AccessPermissionsCollector') as mock_collector_class, \
-         patch('fabricla_connector.workflows.post_rows_to_dcr') as mock_ingest, \
-         patch('fabricla_connector.workflows.get_ingestion_config') as mock_config:
+    with patch('fabricla_connector.collectors.AccessPermissionsCollector') as mock_collector_class, \
+         patch('fabricla_connector.ingestion.post_rows_to_dcr') as mock_ingest, \
+         patch('fabricla_connector.config.get_ingestion_config') as mock_config:
         
         # Mock collector
         mock_collector = Mock()
@@ -206,8 +206,8 @@ def test_collect_and_ingest_workspace_config_workflow():
 
 def test_workspace_config_oap_disabled():
     """Test workspace config when OAP is disabled"""
-    with patch('fabricla_connector.collectors.get_fabric_token') as mock_token, \
-         patch('fabricla_connector.collectors.requests.get') as mock_get:
+    with patch('fabricla_connector.api.get_fabric_token') as mock_token, \
+         patch('fabricla_connector.collectors.permissions.requests.get') as mock_get:
         
         mock_token.return_value = "test-token"
         

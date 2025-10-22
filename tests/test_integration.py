@@ -20,13 +20,13 @@ TestHelpers.setup_sys_path()
 
 try:
     from fabricla_connector.config import get_config
-    from fabricla_connector.ingestion import FabricIngestion
+    from fabricla_connector.ingestion import AzureMonitorIngestionClient
     from fabricla_connector.utils import iso_now, create_time_window
 except ImportError as e:
     print(f"Warning: Could not import framework components: {e}")
     print("Run tests from project root or ensure package is installed")
 
-class TestFabricIngestionWorkflow(unittest.TestCase):
+class TestAzureMonitorIngestionClientWorkflow(unittest.TestCase):
     """Test complete ingestion workflow."""
     
     def setUp(self):
@@ -48,27 +48,27 @@ class TestFabricIngestionWorkflow(unittest.TestCase):
         print(f"   Workspace ID: {TestConfig.WORKSPACE_ID}")
         print(f"   DCE Endpoint: {TestConfig.DCE_ENDPOINT}")
         
-    @patch('fabricla_connector.ingestion.LogsIngestionClient')
-    def test_fabric_ingestion_initialization(self, mock_client_class):
-        """Test FabricIngestion initialization."""
+    @patch('fabricla_connector.ingestion.client.LogsIngestionClient')
+    def test_fabric_ingestion_initialization(self, mock_sdk_client):
+        """Test AzureMonitorIngestionClient initialization."""
         # Setup mock
-        mock_client_class.return_value = self.mock_client
+        mock_sdk_client.return_value = self.mock_client
         
         # Initialize ingestion
-        ingestion = FabricIngestion(
+        ingestion = AzureMonitorIngestionClient(
             dce_endpoint=TestConfig.DCE_ENDPOINT,
             dcr_immutable_id=TestConfig.DCR_IMMUTABLE_ID,
             stream_name=TestConfig.STREAM_NAME
         )
         
         self.assertIsNotNone(ingestion)
-        print("✅ FabricIngestion initialized successfully")
+        print("✅ AzureMonitorIngestionClient initialized successfully")
         
-    @patch('fabricla_connector.ingestion.LogsIngestionClient')
-    def test_pipeline_data_ingestion(self, mock_client_class):
+    @patch('fabricla_connector.ingestion.client.LogsIngestionClient')
+    def test_pipeline_data_ingestion(self, mock_sdk_client):
         """Test pipeline data ingestion workflow."""
         # Setup mock
-        mock_client_class.return_value = self.mock_client
+        mock_sdk_client.return_value = self.mock_client
         
         # Create test data
         pipeline_data = [
@@ -87,14 +87,14 @@ class TestFabricIngestionWorkflow(unittest.TestCase):
         ]
         
         # Initialize ingestion
-        ingestion = FabricIngestion(
+        ingestion = AzureMonitorIngestionClient(
             dce_endpoint=TestConfig.DCE_ENDPOINT,
             dcr_immutable_id=TestConfig.DCR_IMMUTABLE_ID,
             stream_name=TestConfig.STREAM_NAME
         )
         
         # Test ingestion
-        result = ingestion.ingest_data(pipeline_data)
+        result = ingestion.ingest(pipeline_data)
         
         # Verify results
         self.assertEqual(self.mock_client.upload_call_count, 1)
@@ -105,11 +105,11 @@ class TestFabricIngestionWorkflow(unittest.TestCase):
         print(f"✅ Pipeline data ingestion successful")
         print(f"   Records ingested: {len(uploaded_data)}")
         
-    @patch('fabricla_connector.ingestion.LogsIngestionClient')
-    def test_batch_ingestion(self, mock_client_class):
+    @patch('fabricla_connector.ingestion.client.LogsIngestionClient')
+    def test_batch_ingestion(self, mock_sdk_client):
         """Test batch ingestion with multiple records."""
         # Setup mock
-        mock_client_class.return_value = self.mock_client
+        mock_sdk_client.return_value = self.mock_client
         
         # Create test data with multiple records
         test_data = []
@@ -125,15 +125,14 @@ class TestFabricIngestionWorkflow(unittest.TestCase):
             })
         
         # Initialize ingestion
-        ingestion = FabricIngestion(
+        ingestion = AzureMonitorIngestionClient(
             dce_endpoint=TestConfig.DCE_ENDPOINT,
             dcr_immutable_id=TestConfig.DCR_IMMUTABLE_ID,
-            stream_name=TestConfig.STREAM_NAME,
-            batch_size=100  # Force batching
+            stream_name=TestConfig.STREAM_NAME
         )
         
-        # Test ingestion
-        result = ingestion.ingest_data(test_data)
+        # Test ingestion with chunk_size to force batching
+        result = ingestion.ingest(test_data, chunk_size=100)
         
         # Verify batching occurred
         self.assertGreaterEqual(self.mock_client.upload_call_count, 2)  # Should have multiple batches
@@ -271,29 +270,27 @@ class TestErrorHandling(unittest.TestCase):
         """Setup test environment."""
         self.mock_client = MockIngestionClient()
         
-    @patch('fabricla_connector.ingestion.LogsIngestionClient')
-    def test_ingestion_retry_logic(self, mock_client_class):
+    @patch('fabricla_connector.ingestion.client.LogsIngestionClient')
+    def test_ingestion_retry_logic(self, mock_sdk_client):
         """Test retry logic for failed ingestion."""
         # Setup mock to fail first, then succeed
         mock_client = Mock()
-        mock_client.upload.side_effect = [Exception("Network error"), Mock(status=204)]
-        mock_client_class.return_value = mock_client
+        mock_client.upload.side_effect = [Exception("Connection timeout error"), Mock(status=204)]
+        mock_sdk_client.return_value = mock_client
         
         # Test data
         test_data = [{"TimeGenerated": iso_now(), "TestField": "test"}]
         
-        # Initialize ingestion with retry
-        ingestion = FabricIngestion(
+        # Initialize ingestion
+        ingestion = AzureMonitorIngestionClient(
             dce_endpoint=TestConfig.DCE_ENDPOINT,
             dcr_immutable_id=TestConfig.DCR_IMMUTABLE_ID,
-            stream_name=TestConfig.STREAM_NAME,
-            max_retries=2,
-            retry_delay=0.1
+            stream_name=TestConfig.STREAM_NAME
         )
         
-        # Test ingestion (should succeed on retry)
+        # Test ingestion with retry parameters (should succeed on retry)
         start_time = time.time()
-        result = ingestion.ingest_data(test_data)
+        result = ingestion.ingest(test_data, max_retries=2)
         duration = time.time() - start_time
         
         # Verify retry occurred
@@ -346,7 +343,7 @@ def run_integration_tests():
     
     # Add test classes
     test_classes = [
-        TestFabricIngestionWorkflow,
+        TestAzureMonitorIngestionClientWorkflow,
         TestWorkflowPatterns,
         TestErrorHandling
     ]

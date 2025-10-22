@@ -1,12 +1,16 @@
 """
-API authentication and Fabric REST API calls for FabricLA-Connector.
+Authentication functions for Microsoft Fabric APIs.
+
+Provides Fabric-aware authentication with automatic fallback:
+1. Fabric workspace identity (if running in Fabric)
+2. Service principal (client credentials)
+3. Environment variables or Key Vault
 """
 import msal
-import requests
 import os
-from azure.keyvault.secrets import SecretClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, ClientSecretCredential
+from azure.identity import ManagedIdentityCredential
 from typing import Optional, Tuple
+
 
 def acquire_token(tenant: str, client_id: str, client_secret: str, scope: str) -> str:
     """Acquire OAuth token for API access using client credentials"""
@@ -23,6 +27,7 @@ def acquire_token(tenant: str, client_id: str, client_secret: str, scope: str) -
     print(f"SUCCESS: Token acquired for {scope}: {token[:10]}...{token[-10:]}")
     return token
 
+
 def acquire_token_managed_identity(scope: str) -> str:
     """Get token using managed identity (for Azure resources)"""
     try:
@@ -32,6 +37,7 @@ def acquire_token_managed_identity(scope: str) -> str:
         return token.token
     except Exception as e:
         raise RuntimeError(f"Failed to get managed identity token for {scope}: {e}")
+
 
 def get_fabric_token(scope: str = "https://api.fabric.microsoft.com/.default") -> str:
     """
@@ -64,6 +70,7 @@ def get_fabric_token(scope: str = "https://api.fabric.microsoft.com/.default") -
         raise RuntimeError("No valid credentials found for token acquisition")
     
     return acquire_token(tenant_id, client_id, client_secret, scope)
+
 
 def get_credentials_fabric_aware() -> Tuple[Optional[str], Optional[str], Optional[str], bool]:
     """
@@ -117,117 +124,3 @@ def get_credentials_fabric_aware() -> Tuple[Optional[str], Optional[str], Option
     auth_source = "Fabric Key Vault" if running_in_fabric else "Environment Variables"
     print(f"[Auth] SUCCESS: Using credentials from {auth_source}")
     return final_tenant, final_client_id, final_secret, running_in_fabric
-
-def get_secret_from_key_vault(vault_uri: str, secret_name: str) -> str:
-    """Get secret from Azure Key Vault using managed identity"""
-    credential = DefaultAzureCredential()
-    client = SecretClient(vault_url=vault_uri, credential=credential)
-    secret = client.get_secret(secret_name).value
-    if secret is None:
-        raise RuntimeError(f"Secret '{secret_name}' not found or has no value in Key Vault '{vault_uri}'.")
-    return secret
-
-FABRIC_API = "https://api.fabric.microsoft.com/v1"
-
-def get_capacities(token: str):
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"{FABRIC_API}/capacities", headers=headers, timeout=60)
-    response.raise_for_status()
-    return response.json().get("value", [])
-
-def get_workspaces(token: str):
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"{FABRIC_API}/workspaces", headers=headers, timeout=60)
-    response.raise_for_status()
-    return response.json().get("value", [])
-
-def get_workspace_items(workspace_id: str, token: str):
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"{FABRIC_API}/workspaces/{workspace_id}/items", headers=headers, timeout=60)
-    if response.status_code == 200:
-        return response.json().get("value", [])
-    return []
-
-# === Dataset API helpers ===
-def list_workspace_datasets(workspace_id: str, token: str):
-    url = f"{FABRIC_API}/workspaces/{workspace_id}/datasets"
-    headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get(url, headers=headers, timeout=60)
-    if r.status_code == 200:
-        return r.json().get("value", [])
-    return []
-
-def get_dataset_metadata(dataset_id: str, token: str):
-    url = f"{FABRIC_API}/datasets/{dataset_id}"
-    headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get(url, headers=headers, timeout=60)
-    if r.status_code == 200:
-        return r.json()
-    return {}
-
-def get_dataset_refresh_history(dataset_id: str, token: str, top: int = 200):
-    url = f"{FABRIC_API}/datasets/{dataset_id}/refreshes?$top={top}"
-    headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get(url, headers=headers, timeout=60)
-    if r.status_code == 200:
-        return r.json().get("value", [])
-    return []
-
-# === Utility functions ===
-import datetime as dt
-def parse_iso(s: str):
-    if not s:
-        return None
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    parsed = dt.datetime.fromisoformat(s)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed
-
-def within_lookback(start_iso: str, end_iso: str, lookback_minutes: int) -> bool:
-    edge = dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc) - dt.timedelta(minutes=int(lookback_minutes))
-    t = parse_iso(end_iso) or parse_iso(start_iso)
-    return (t is not None) and (t >= edge)
-
-# === Pipeline API helpers ===
-def list_item_job_instances(workspace_id: str, item_id: str, token: str):
-    url = f"{FABRIC_API}/workspaces/{workspace_id}/items/{item_id}/jobs/instances"
-    headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get(url, headers=headers, timeout=60)
-    if r.status_code == 200:
-        data = r.json()
-        return data.get("value", [])
-    return []
-
-def query_pipeline_activity_runs(workspace_id: str, job_instance_id: str, token: str, last_after_iso: str, last_before_iso: str):
-    url = f"{FABRIC_API}/workspaces/{workspace_id}/datapipelines/pipelineruns/{job_instance_id}/queryactivityruns"
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    body = {
-        "filters": [],
-        "orderBy": [{"orderBy": "ActivityRunStart", "order": "DESC"}],
-        "lastUpdatedAfter": last_after_iso,
-        "lastUpdatedBefore": last_before_iso,
-    }
-    r = requests.post(url, headers=headers, json=body, timeout=60)
-    if r.status_code == 200:
-        data = r.json()
-        return data.get("value") or data.get("activityRuns") or data.get("items") or []
-    return []
-
-# === Mappers (stubs, to be implemented in collectors.py) ===
-def map_dataset_refresh(workspace_id, dataset_id, dataset_name, refresh):
-    # Should be implemented in collectors.py
-    pass
-
-def map_dataset_metadata(workspace_id, dataset):
-    # Should be implemented in collectors.py
-    pass
-
-def map_pipeline_run(workspace_id, item_id, run):
-    # Should be implemented in collectors.py
-    pass
-
-def map_activity_run(workspace_id, pipeline_id, pipeline_run_id, act):
-    # Should be implemented in collectors.py
-    pass

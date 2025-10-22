@@ -50,34 +50,55 @@ result = post_rows_to_dcr(
 
 # Import main modules for easy access
 from . import workflows
-from . import collectors
-from . import ingestion
 from . import config
-from . import api
 from . import utils
-from . import mappers
-
-# Import intelligent monitoring modules
 from . import monitoring_detection
-# from . import intelligent_workflows  # TODO: Create this module
 
-# Import key classes and functions for direct access
+# Import refactored subpackages
+from .api import FabricAPIClient
 from .collectors import (
     PipelineDataCollector,
     DatasetRefreshCollector, 
     CapacityUtilizationCollector,
-    UserActivityCollector
+    UserActivityCollector,
+    # Spark collector functions
+    collect_livy_sessions_workspace,
+    collect_livy_sessions_notebook,
+    collect_livy_sessions_sparkjob,
+    collect_livy_sessions_lakehouse,
+    collect_spark_logs,
+    collect_spark_metrics,
+    collect_spark_resource_usage,
+    collect_resource_usage_for_active_sessions,
+    collect_spark_applications_workspace,
+    collect_spark_applications_item
 )
-
 from .mappers import (
     PipelineRunMapper,
     ActivityRunMapper,
+    DataflowRunMapper,
     DatasetRefreshMapper,
+    DatasetMetadataMapper,
     CapacityMetricMapper,
-    UserActivityMapper
+    UserActivityMapper,
+    LivySessionMapper,
+    SparkResourceMapper
+)
+from .ingestion import (
+    post_rows_to_dcr,
+    AzureMonitorIngestionClient,
+    chunk_records,
+    RetryPolicy
 )
 
-from .ingestion import post_rows_to_dcr, FabricIngestion
+# Import modules for backward compatibility
+from . import api
+from . import collectors
+from . import mappers
+from . import ingestion
+
+# Backward compatibility alias
+FabricIngestion = AzureMonitorIngestionClient
 
 from .config import (
     get_config,
@@ -89,6 +110,7 @@ from .config import (
     is_running_in_fabric
 )
 
+# Import authentication functions (now re-exported from api package)
 from .api import get_fabric_token, get_credentials_fabric_aware
 
 from .workflows import (
