@@ -1,21 +1,40 @@
 # Bicep Deployment for Fabric Log Analytics
 
-This Bicep template deploys the Azure infrastructure required for Fabric monitoring with Log Analytics.
+## 🎯 **NEW: Modular Deployment Model**
 
-## What Gets Deployed
+This Bicep deployment now supports **modular, selective deployment** of Fabric monitoring components. Choose exactly which monitoring modules you need!
 
-### Core Resources
+👉 **[Read the Complete Modular Deployment Guide](./MODULAR_DEPLOYMENT_GUIDE.md)** 👈
+
+---
+
+## Overview
+
+This Bicep template deploys the Azure infrastructure required for Fabric monitoring with Log Analytics using a **modular approach** that respects Azure's 10-dataFlow limit per DCR.
+
+### Available Monitoring Modules
+
+1. 🔥 **Spark Monitoring** (8 streams) - *Enabled by default*
+2. 📊 **Pipeline & Dataflow Monitoring** (4 streams) - *Optional*
+3. 💾 **Capacity & Workspace Monitoring** (7 streams) - *Optional*
+4. 🔐 **Admin & Governance Monitoring** (6 streams) - *Optional*
+
+### What Gets Deployed
+
+#### Core Resources (Always Deployed)
 - **Data Collection Endpoint (DCE)**: Receives log data from the notebooks
-- **Data Collection Rule (DCR)**: Defines custom streams and routing to Log Analytics
+- **Custom Log Analytics Tables**: 25+ tables for all monitoring scenarios
+- **Data Collection Rules (DCRs)**: One for each enabled monitoring module
 
-### What Does NOT Get Deployed
-- ❌ **Log Analytics Tables**: Tables are automatically created when data is first ingested
+#### What Does NOT Get Deployed
 - ❌ **Log Analytics Workspace**: Must exist before running this deployment
+- ❌ **Azure Monitor Workbooks**: Created separately
+- ❌ **Alert Rules**: Configured post-deployment
 
 ## Prerequisites
 
 1. **Existing Log Analytics Workspace**: The workspace must already exist
-2. **Azure CLI or PowerShell**: For deployment
+2. **Azure CLI** (with Bicep) or **PowerShell**: For deployment
 3. **Proper Permissions**: Contributor access to the resource group
 
 ## Deployment
