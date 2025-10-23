@@ -142,13 +142,13 @@ $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
 if (Test-Path $readme) {
     Write-Info "Updating README.md occurrences of version..."
-    $readmeText = Get-Content -Raw -Path $readme
+    # Read with UTF-8 encoding to preserve special characters and emojis
+    $readmeText = Get-Content -Raw -Path $readme -Encoding UTF8
     # Replace v<oldVersion> and fabricla-connector v<oldVersion>
     $r = $readmeText -replace [regex]::Escape("v$oldVersion"), "v$NewVersion"
     $r = $r -replace [regex]::Escape("fabricla-connector v$oldVersion"), "fabricla-connector v$NewVersion"
-    # Write without BOM
-    $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
-    [System.IO.File]::WriteAllText($readme, $r, $Utf8NoBomEncoding)
+    # Write with UTF-8 encoding (with BOM to preserve special characters in PowerShell)
+    [System.IO.File]::WriteAllText($readme, $r, [System.Text.UTF8Encoding]::new($true))
 }
 
 # Verify package builds before committing
