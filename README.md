@@ -2,17 +2,17 @@
 
 A comprehensive **Python framework** that collects operational data from Microsoft Fabric REST APIs and ingests it into **Azure Log Analytics** for monitoring, analysis, and alerting.
 
-## ✨ **NEW: Intelligent Monitoring with Smart Detection**
+## âœ¨ **NEW: Intelligent Monitoring with Smart Detection**
 
 The framework now includes **intelligent monitoring capabilities** that automatically detect Microsoft's workspace monitoring and adapt collection strategy to avoid conflicts while maximizing unique value.
 
-### **🧠 Smart Features**
+### **ðŸ§  Smart Features**
 - **Automatic Conflict Detection**: Detects Microsoft's workspace monitoring via REST API
 - **Intelligent Strategy Selection**: Auto-chooses the best collection strategy
 - **Backwards Compatibility**: Works with customers not using workspace monitoring
 - **Unique Value Focus**: Prioritizes data not covered by Microsoft's official monitoring
 
-### **📋 Quick Intelligent Start**
+### **ðŸ“‹ Quick Intelligent Start**
 ```python
 from fabricla_connector import run_intelligent_monitoring_cycle
 
@@ -23,7 +23,7 @@ result = run_intelligent_monitoring_cycle(
 )
 ```
 
-## 🚀 Quick Start
+## ðŸš€ Quick Start
 
 ### **Install & Test Locally**
 ```bash
@@ -33,7 +33,7 @@ cd FabricLA-Connector
 pip install -e .
 
 # Test intelligent monitoring
-python -c "from fabricla_connector import run_intelligent_monitoring_cycle; print('✅ Intelligent monitoring ready')"
+python -c "from fabricla_connector import run_intelligent_monitoring_cycle; print('âœ… Intelligent monitoring ready')"
 ```
 
 ### **Authentication Setup**
@@ -47,7 +47,7 @@ export FABRIC_APP_SECRET="your-app-secret"
 export FABRIC_TENANT_ID="your-tenant-id"
 ```
 
-### **🔧 Fabric Runtime Environment Setup**
+### **ðŸ”§ Fabric Runtime Environment Setup**
 
 For development environments that need to match Microsoft Fabric runtime specifications exactly, use the automated setup scripts:
 
@@ -68,7 +68,7 @@ These scripts automatically:
 
 See [setup/README.md](setup/README.md) for detailed documentation.
 
-## 📊 What This Framework Monitors
+## ðŸ“Š What This Framework Monitors
 
 | **Data Source** | **Information Collected** | **Custom Table** |
 |-----------------|---------------------------|------------------|
@@ -76,11 +76,11 @@ See [setup/README.md](setup/README.md) for detailed documentation.
 | **Dataset Refresh** | Refresh operations, duration, failure analysis | `FabricDatasetRefresh_CL`, `FabricDatasetMetadata_CL` |
 | **User Activity** | Access patterns, security events, usage analytics | `FabricUserActivity_CL` |
 | **Capacity Metrics** | Resource utilization, workload distribution | `FabricCapacityMetrics_CL`, `FabricCapacityWorkloads_CL` |
-| **🆕 Workspace Configuration** | OAP settings, security policies, Git integration, compliance | `FabricWorkspaceConfig_CL` |
+| **ðŸ†• Workspace Configuration** | OAP settings, security policies, Git integration, compliance | `FabricWorkspaceConfig_CL` |
 | **Spark Execution** | Spark applications, logs, metrics, network traffic | `FabricSparkApplications_CL`, `FabricSparkLogs_CL` |
 | **Access Permissions** | User roles, item permissions, capacity assignments | `FabricPermissions_CL` |
 
-## 🔧 Technical Positioning: Complementary Monitoring Architecture
+## ðŸ”§ Technical Positioning: Complementary Monitoring Architecture
 
 ### **Microsoft's Native Monitoring Capabilities**
 
@@ -164,14 +164,14 @@ FUAM (Optional):
 
 | **Unique Value Added** | **Existing Microsoft Solutions** | **FabricLA-Connector Enhancement** |
 |------------------------|----------------------------------|-----------------------------------|
-| **Pipeline Execution Monitoring** | ❌ No native real-time pipeline monitoring | ✅ Real-time execution tracking, activity-level details, failure analysis |
-| **Programmable Collection Logic** | ❌ Fixed schemas and collection patterns | ✅ Python framework, custom business rules, conditional collection |
-| **Azure Monitor Integration** | ❌ Limited Log Analytics integration | ✅ Full DCR/DCE implementation, custom schemas, Azure alerting |
-| **CI/CD & Infrastructure as Code** | ❌ Manual setup and configuration | ✅ Bicep/Terraform templates, Python package, GitHub Actions |
-| **Long-term Operational Trends** | ⚠️ 30-day retention in Workspace Monitoring | ✅ Multi-year retention, historical trend analysis |
-| **Custom Capacity Metrics** | ⚠️ Limited capacity visibility | ✅ Workspace-level utilization, custom thresholds, cost tracking |
-| **Intelligent Conflict Avoidance** | ❌ No coordination between solutions | ✅ Auto-detects Microsoft monitoring, adapts collection strategy |
-| **Developer Automation** | ❌ Admin-focused tools only | ✅ Python SDK, notebook templates, programmatic workflows |
+| **Pipeline Execution Monitoring** | âŒ No native real-time pipeline monitoring | âœ… Real-time execution tracking, activity-level details, failure analysis |
+| **Programmable Collection Logic** | âŒ Fixed schemas and collection patterns | âœ… Python framework, custom business rules, conditional collection |
+| **Azure Monitor Integration** | âŒ Limited Log Analytics integration | âœ… Full DCR/DCE implementation, custom schemas, Azure alerting |
+| **CI/CD & Infrastructure as Code** | âŒ Manual setup and configuration | âœ… Bicep/Terraform templates, Python package, GitHub Actions |
+| **Long-term Operational Trends** | âš ï¸ 30-day retention in Workspace Monitoring | âœ… Multi-year retention, historical trend analysis |
+| **Custom Capacity Metrics** | âš ï¸ Limited capacity visibility | âœ… Workspace-level utilization, custom thresholds, cost tracking |
+| **Intelligent Conflict Avoidance** | âŒ No coordination between solutions | âœ… Auto-detects Microsoft monitoring, adapts collection strategy |
+| **Developer Automation** | âŒ Admin-focused tools only | âœ… Python SDK, notebook templates, programmatic workflows |
 
 #### **Complementary Usage Patterns**
 
@@ -192,7 +192,7 @@ FUAM (Optional):
 - **Fabric Admin APIs**: https://learn.microsoft.com/en-us/rest/api/fabric/admin
 - **Azure Monitor Logs Ingestion**: https://learn.microsoft.com/en-us/azure/azure-monitor/logs/logs-ingestion-api-overview
 
-## 🔧 Framework Components
+## ðŸ”§ Framework Components
 
 ### **Core Python Package** (`/src/fabricla_connector/`)
 ```python
@@ -225,7 +225,7 @@ from fabricla_connector.ingestion import FabricIngestion
 - Local testing and package upload utilities
 - See [tools/README.md](tools/README.md) for detailed documentation
 
-## 📋 Complete Setup Guide
+## ðŸ“‹ Complete Setup Guide
 
 ### **1. Deploy Infrastructure**
 
@@ -274,7 +274,7 @@ result = run_full_monitoring_cycle(
 - Configure authentication
 - Execute based on your monitoring needs
 
-## 🧪 Local Development
+## ðŸ§ª Local Development
 
 ### **Build & Test Package**
 ```bash
@@ -290,40 +290,40 @@ python test_local_build.py --workspace-id YOUR_ID --environment-id YOUR_ID --pub
 
 See [tools/README.md](tools/README.md) for comprehensive testing and upload options.
 
-## 🏗️ Architecture
+## ðŸ—ï¸ Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│ Microsoft       │    │ FabricLA         │    │ Azure Log Analytics │
-│ Fabric          │────│ Connector        │────│ Workspace           │
-│ (REST APIs)     │    │ Framework        │    │ (Custom Tables)     │
-└─────────────────┘    └──────────────────┘    └─────────────────────┘
-                              │
-                    ┌─────────┼─────────┐
-                    │         │         │
-              ┌──────▼──┐ ┌────▼───┐ ┌───▼────┐
-              │ Fabric  │ │ Local  │ │ CI/CD  │
-              │Notebooks│ │ Python │ │Pipeline│
-              └─────────┘ └────────┘ └────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ Microsoft       â”‚    â”‚ FabricLA         â”‚    â”‚ Azure Log Analytics â”‚
+â”‚ Fabric          â”‚â”€â”€â”€â”€â”‚ Connector        â”‚â”€â”€â”€â”€â”‚ Workspace           â”‚
+â”‚ (REST APIs)     â”‚    â”‚ Framework        â”‚    â”‚ (Custom Tables)     â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                              â”‚
+                    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                    â”‚         â”‚         â”‚
+              â”Œâ”€â”€â”€â”€â”€â”€â–¼â”€â”€â” â”Œâ”€â”€â”€â”€â–¼â”€â”€â”€â” â”Œâ”€â”€â”€â–¼â”€â”€â”€â”€â”
+              â”‚ Fabric  â”‚ â”‚ Local  â”‚ â”‚ CI/CD  â”‚
+              â”‚Notebooksâ”‚ â”‚ Python â”‚ â”‚Pipelineâ”‚
+              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-## 📚 Documentation
+## ðŸ“š Documentation
 
 - **[Local Testing Guide](tools/README.md)** - Development and upload tools
 - **[Deployment Options](DEPLOYMENT_OPTIONS_GUIDE.md)** - Staging vs auto-publish
 - **[Packaging Guide](PACKAGING_BEST_PRACTICES.md)** - Modern Python packaging
 
-## 🤝 Contributing
+## ðŸ¤ Contributing
 
 1. Clone the repository
 2. Install in development mode: `pip install -e .`
 3. Make changes and test locally
 4. Use the local testing tools to validate
 
-## 📄 License
+## ðŸ“„ License
 
 MIT License - See LICENSE file for details
 
 ---
 
-**🚀 Ready to monitor your Microsoft Fabric environment?** Start with the Quick Start guide above!
+**ðŸš€ Ready to monitor your Microsoft Fabric environment?** Start with the Quick Start guide above!

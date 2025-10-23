@@ -4,7 +4,7 @@ FabricLA-Connector: Microsoft Fabric to Log Analytics data collection and ingest
 This package provides a comprehensive framework for collecting data from Microsoft Fabric 
 workloads and ingesting it into Azure Monitor Log Analytics.
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 Main Features:
 - Fabric-aware authentication (supports workspace identity, managed identity, client credentials)
