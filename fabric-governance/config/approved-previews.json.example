@@ -1,0 +1,128 @@
+# Sample Configuration: Approved Preview Features
+
+This file defines which preview features are approved for use in your organization.
+Features listed here will NOT be automatically disabled by governance scripts.
+
+## How to Use
+
+1. Review new preview features when they appear
+2. Test thoroughly in TEST environment
+3. Document business justification and risk assessment
+4. Add approved features to this file
+5. Use this file with: `Disable-PreviewFeatures.ps1 -ExcludeApprovedPreviews approved-previews.json`
+
+## Format
+
+```json
+{
+  "approvedPreviewFeatures": [
+    "SettingName1",
+    "SettingName2"
+  ],
+  "approvalHistory": [
+    {
+      "settingName": "SettingName1",
+      "title": "Feature Display Name",
+      "approvedDate": "2025-01-15",
+      "approvedBy": "admin@company.com",
+      "justification": "Required for X business process",
+      "riskAssessment": "Low - feature is stable in TEST",
+      "expiryDate": "2025-06-30"
+    }
+  ]
+}
+```
+
+## Example: Real Configuration
+
+```json
+{
+  "approvedPreviewFeatures": [
+    "OneLakeDataAccessSecuritySettings",
+    "FabricGitIntegrationSettings"
+  ],
+  "approvalHistory": [
+    {
+      "settingName": "OneLakeDataAccessSecuritySettings",
+      "title": "OneLake Data Access Security (Preview)",
+      "approvedDate": "2025-01-15",
+      "approvedBy": "fabric-admin@company.com",
+      "justification": "Required for enhanced data security controls",
+      "riskAssessment": "Low - tested for 3 months in TEST",
+      "expiryDate": "2025-06-30",
+      "notes": "Will be re-evaluated when GA is released"
+    },
+    {
+      "settingName": "FabricGitIntegrationSettings",
+      "title": "Git Integration (Preview)",
+      "approvedDate": "2024-11-20",
+      "approvedBy": "devops-team@company.com",
+      "justification": "Critical for CI/CD pipeline",
+      "riskAssessment": "Medium - occasional sync issues observed",
+      "expiryDate": "2025-03-31",
+      "notes": "Monitoring for issues, will disable if problems arise"
+    }
+  ]
+}
+```
+
+## Approval Process Recommendations
+
+### Before Approving a Preview Feature
+
+1. **Test Period**: Minimum 30 days in TEST environment
+2. **Impact Assessment**: Document affected workloads and users
+3. **Rollback Plan**: Ensure you can disable without disruption
+4. **Stakeholder Sign-off**: Get approval from business owners
+5. **Monitoring**: Set up alerts for feature-related issues
+
+### Review Schedule
+
+- **Weekly**: Check for new preview features
+- **Monthly**: Review approved features for issues
+- **Quarterly**: Re-assess all approved previews
+- **At GA Release**: Migrate from preview to GA version
+
+### Risk Levels
+
+| Risk Level | Criteria | Approval Required |
+|------------|----------|-------------------|
+| **Low** | Stable in TEST, limited scope, easy rollback | Team Lead |
+| **Medium** | Some instability, broader impact, rollback effort | Manager + CTO |
+| **High** | Production-critical, broad impact, difficult rollback | Executive Committee |
+
+## Security Considerations
+
+- Store this file in **version control** (Git)
+- Require **pull request reviews** for changes
+- **Audit all changes** with commit messages
+- **Restrict write access** to governance team only
+
+## Automated Checks
+
+This file can be used in CI/CD pipelines:
+
+```powershell
+# Fail deployment if unapproved previews are enabled
+.\Disable-PreviewFeatures.ps1 `
+  -ExcludeApprovedPreviews "approved-previews.json" `
+  -Environment "Production" `
+  -Force
+```
+
+## Sample Empty Configuration
+
+Use this as your starting point:
+
+```json
+{
+  "approvedPreviewFeatures": [],
+  "approvalHistory": [],
+  "metadata": {
+    "lastReviewDate": "2025-01-01",
+    "nextReviewDate": "2025-04-01",
+    "reviewers": ["admin1@company.com", "admin2@company.com"],
+    "governancePolicy": "https://company.sharepoint.com/fabric-governance"
+  }
+}
+```

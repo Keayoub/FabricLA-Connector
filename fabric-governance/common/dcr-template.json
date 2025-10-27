@@ -1,0 +1,258 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "dcrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Data Collection Rule"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the DCR"
+      }
+    },
+    "dceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Data Collection Endpoint"
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2022-06-01",
+      "name": "[parameters('dcrName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "dataCollectionEndpointId": "[parameters('dceResourceId')]",
+        "streamDeclarations": {
+          "Custom-FabricTenantSettings_CL": {
+            "columns": [
+              {
+                "name": "TimeGenerated",
+                "type": "datetime"
+              },
+              {
+                "name": "TenantId",
+                "type": "string"
+              },
+              {
+                "name": "SettingName",
+                "type": "string"
+              },
+              {
+                "name": "Title",
+                "type": "string"
+              },
+              {
+                "name": "Enabled",
+                "type": "boolean"
+              },
+              {
+                "name": "CanSpecifySecurityGroups",
+                "type": "boolean"
+              },
+              {
+                "name": "TenantSettingGroup",
+                "type": "string"
+              },
+              {
+                "name": "IsPreviewFeature",
+                "type": "boolean"
+              },
+              {
+                "name": "PreviewIndicators",
+                "type": "string"
+              },
+              {
+                "name": "CollectionTimestamp",
+                "type": "datetime"
+              }
+            ]
+          },
+          "Custom-FabricPreviewFeatures_CL": {
+            "columns": [
+              {
+                "name": "TimeGenerated",
+                "type": "datetime"
+              },
+              {
+                "name": "TenantId",
+                "type": "string"
+              },
+              {
+                "name": "SettingName",
+                "type": "string"
+              },
+              {
+                "name": "Title",
+                "type": "string"
+              },
+              {
+                "name": "IsEnabled",
+                "type": "boolean"
+              },
+              {
+                "name": "WasEnabled",
+                "type": "boolean"
+              },
+              {
+                "name": "ChangeDetected",
+                "type": "boolean"
+              },
+              {
+                "name": "Environment",
+                "type": "string"
+              },
+              {
+                "name": "RiskLevel",
+                "type": "string"
+              }
+            ]
+          },
+          "Custom-FabricGovernanceEvents_CL": {
+            "columns": [
+              {
+                "name": "TimeGenerated",
+                "type": "datetime"
+              },
+              {
+                "name": "TenantId",
+                "type": "string"
+              },
+              {
+                "name": "EventType",
+                "type": "string"
+              },
+              {
+                "name": "EventDescription",
+                "type": "string"
+              },
+              {
+                "name": "ActorId",
+                "type": "string"
+              },
+              {
+                "name": "TargetResource",
+                "type": "string"
+              },
+              {
+                "name": "Success",
+                "type": "boolean"
+              },
+              {
+                "name": "ErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "Custom-FabricEnvironmentComparison_CL": {
+            "columns": [
+              {
+                "name": "TimeGenerated",
+                "type": "datetime"
+              },
+              {
+                "name": "SettingPath",
+                "type": "string"
+              },
+              {
+                "name": "TestValue",
+                "type": "string"
+              },
+              {
+                "name": "ProdValue",
+                "type": "string"
+              },
+              {
+                "name": "HasDrift",
+                "type": "boolean"
+              },
+              {
+                "name": "IsPreviewFeature",
+                "type": "boolean"
+              },
+              {
+                "name": "RiskLevel",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "destinations": {
+          "logAnalytics": [
+            {
+              "workspaceResourceId": "[parameters('lawResourceId')]",
+              "name": "fabricGovernanceWorkspace"
+            }
+          ]
+        },
+        "dataFlows": [
+          {
+            "streams": [
+              "Custom-FabricTenantSettings_CL"
+            ],
+            "destinations": [
+              "fabricGovernanceWorkspace"
+            ],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricTenantSettings_CL"
+          },
+          {
+            "streams": [
+              "Custom-FabricPreviewFeatures_CL"
+            ],
+            "destinations": [
+              "fabricGovernanceWorkspace"
+            ],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricPreviewFeatures_CL"
+          },
+          {
+            "streams": [
+              "Custom-FabricGovernanceEvents_CL"
+            ],
+            "destinations": [
+              "fabricGovernanceWorkspace"
+            ],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricGovernanceEvents_CL"
+          },
+          {
+            "streams": [
+              "Custom-FabricEnvironmentComparison_CL"
+            ],
+            "destinations": [
+              "fabricGovernanceWorkspace"
+            ],
+            "transformKql": "source",
+            "outputStream": "Custom-FabricEnvironmentComparison_CL"
+          }
+        ]
+      },
+      "tags": {
+        "Purpose": "FabricTenantGovernance"
+      }
+    }
+  ],
+  "outputs": {
+    "dcrImmutableId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), '2022-06-01').immutableId]"
+    },
+    "dcrId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
+    }
+  }
+}
