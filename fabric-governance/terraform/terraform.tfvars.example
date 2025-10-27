@@ -1,0 +1,38 @@
+# ============================================================================
+# Terraform Variables for Fabric Tenant Governance
+# ============================================================================
+# Copy this file to terraform.tfvars and customize the values
+# ============================================================================
+
+# Azure Configuration
+resource_group_name = "rg-fabric-governance"
+location            = "eastus"
+
+# Log Analytics Workspace Configuration
+workspace_name    = "fabric-governance-la"
+workspace_sku     = "PerGB2018"
+retention_in_days = 90
+
+# Environment Configuration
+environment_tag = "production"
+
+# Alert Configuration
+enable_alerts         = true
+alert_email_addresses = "admin@company.com,governance-team@company.com"
+
+# ============================================================================
+# Additional Examples
+# ============================================================================
+
+# For TEST environment:
+# environment_tag = "test"
+# workspace_name = "fabric-governance-test-la"
+
+# For PROD environment with minimal alerts:
+# environment_tag = "production"
+# enable_alerts = true
+# alert_email_addresses = "prod-alerts@company.com"
+
+# For high-retention compliance environment:
+# retention_in_days = 365
+# workspace_sku = "PerGB2018"

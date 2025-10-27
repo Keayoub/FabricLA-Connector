@@ -1,0 +1,45 @@
+# ============================================================================
+# Fabric Tenant Governance - Python Dependencies
+# ============================================================================
+# Install with: pip install -r requirements.txt
+# ============================================================================
+
+# Azure Core
+azure-identity>=1.15.0
+azure-mgmt-loganalytics>=13.0.0
+azure-monitor-ingestion>=1.0.3
+azure-core>=1.30.0
+
+# HTTP & API
+requests>=2.31.0
+urllib3>=2.1.0
+
+# Data Processing
+pandas>=2.1.0
+numpy>=1.24.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Visualization (optional, for notebooks)
+plotly>=5.18.0
+matplotlib>=3.8.0
+
+# Jupyter (optional, for notebook development)
+jupyter>=1.0.0
+ipykernel>=6.27.0
+
+# Semantic Link (for Fabric integration)
+semantic-link-sempy>=0.7.0
+
+# Logging & Monitoring
+python-json-logger>=2.0.7
+
+# Date/Time
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Testing (optional)
+pytest>=7.4.3
+pytest-cov>=4.1.0
+responses>=0.24.0

@@ -1,0 +1,244 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Log Analytics workspace"
+      }
+    },
+    "retentionInDays": {
+      "type": "int",
+      "defaultValue": 90,
+      "metadata": {
+        "description": "Data retention in days"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricTenantSettings_CL')]",
+      "properties": {
+        "schema": {
+          "name": "FabricTenantSettings_CL",
+          "columns": [
+            {
+              "name": "TimeGenerated",
+              "type": "datetime",
+              "description": "Timestamp when the record was generated"
+            },
+            {
+              "name": "TenantId",
+              "type": "string",
+              "description": "Fabric tenant identifier"
+            },
+            {
+              "name": "SettingName",
+              "type": "string",
+              "description": "Internal name of the tenant setting"
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "description": "Display title of the setting"
+            },
+            {
+              "name": "Enabled",
+              "type": "boolean",
+              "description": "Whether the setting is enabled"
+            },
+            {
+              "name": "CanSpecifySecurityGroups",
+              "type": "boolean",
+              "description": "Whether security groups can be specified"
+            },
+            {
+              "name": "TenantSettingGroup",
+              "type": "string",
+              "description": "Group category of the setting"
+            },
+            {
+              "name": "IsPreviewFeature",
+              "type": "boolean",
+              "description": "Whether this is a preview feature"
+            },
+            {
+              "name": "PreviewIndicators",
+              "type": "string",
+              "description": "Keywords that indicate preview status"
+            },
+            {
+              "name": "CollectionTimestamp",
+              "type": "datetime",
+              "description": "When the data was collected"
+            }
+          ]
+        },
+        "retentionInDays": "[parameters('retentionInDays')]"
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricPreviewFeatures_CL')]",
+      "properties": {
+        "schema": {
+          "name": "FabricPreviewFeatures_CL",
+          "columns": [
+            {
+              "name": "TimeGenerated",
+              "type": "datetime",
+              "description": "Timestamp when the record was generated"
+            },
+            {
+              "name": "TenantId",
+              "type": "string",
+              "description": "Fabric tenant identifier"
+            },
+            {
+              "name": "SettingName",
+              "type": "string",
+              "description": "Internal name of the preview feature"
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "description": "Display title of the preview feature"
+            },
+            {
+              "name": "IsEnabled",
+              "type": "boolean",
+              "description": "Current enabled status"
+            },
+            {
+              "name": "WasEnabled",
+              "type": "boolean",
+              "description": "Previous enabled status"
+            },
+            {
+              "name": "ChangeDetected",
+              "type": "boolean",
+              "description": "Whether a change was detected"
+            },
+            {
+              "name": "Environment",
+              "type": "string",
+              "description": "Environment name (TEST/PROD)"
+            },
+            {
+              "name": "RiskLevel",
+              "type": "string",
+              "description": "Risk level of the preview feature"
+            }
+          ]
+        },
+        "retentionInDays": "[parameters('retentionInDays')]"
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricGovernanceEvents_CL')]",
+      "properties": {
+        "schema": {
+          "name": "FabricGovernanceEvents_CL",
+          "columns": [
+            {
+              "name": "TimeGenerated",
+              "type": "datetime",
+              "description": "Timestamp when the event occurred"
+            },
+            {
+              "name": "TenantId",
+              "type": "string",
+              "description": "Fabric tenant identifier"
+            },
+            {
+              "name": "EventType",
+              "type": "string",
+              "description": "Type of governance event"
+            },
+            {
+              "name": "EventDescription",
+              "type": "string",
+              "description": "Detailed event description"
+            },
+            {
+              "name": "ActorId",
+              "type": "string",
+              "description": "User or service that triggered the event"
+            },
+            {
+              "name": "TargetResource",
+              "type": "string",
+              "description": "Resource affected by the event"
+            },
+            {
+              "name": "Success",
+              "type": "boolean",
+              "description": "Whether the action succeeded"
+            },
+            {
+              "name": "ErrorMessage",
+              "type": "string",
+              "description": "Error message if action failed"
+            }
+          ]
+        },
+        "retentionInDays": "[parameters('retentionInDays')]"
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/tables",
+      "apiVersion": "2022-10-01",
+      "name": "[concat(parameters('workspaceName'), '/FabricEnvironmentComparison_CL')]",
+      "properties": {
+        "schema": {
+          "name": "FabricEnvironmentComparison_CL",
+          "columns": [
+            {
+              "name": "TimeGenerated",
+              "type": "datetime",
+              "description": "Timestamp when comparison was performed"
+            },
+            {
+              "name": "SettingPath",
+              "type": "string",
+              "description": "Path to the setting"
+            },
+            {
+              "name": "TestValue",
+              "type": "string",
+              "description": "Value in TEST environment"
+            },
+            {
+              "name": "ProdValue",
+              "type": "string",
+              "description": "Value in PROD environment"
+            },
+            {
+              "name": "HasDrift",
+              "type": "boolean",
+              "description": "Whether drift was detected"
+            },
+            {
+              "name": "IsPreviewFeature",
+              "type": "boolean",
+              "description": "Whether setting is a preview feature"
+            },
+            {
+              "name": "RiskLevel",
+              "type": "string",
+              "description": "Risk level of the drift"
+            }
+          ]
+        },
+        "retentionInDays": "[parameters('retentionInDays')]"
+      }
+    }
+  ],
+  "outputs": {}
+}
