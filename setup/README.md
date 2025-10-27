@@ -93,7 +93,12 @@ fabric-la-connector/
    ```
 
 4. **Configure environment variables:**
-   - Copy `.env.example` to `.env`
+   - Copy the master `.env.example` from the root folder:
+     ```bash
+     cp ../.env.example .env
+     # Or for notebooks folder:
+     cp ../.env.example ../notebooks/.env
+     ```
    - Fill in your Azure credentials and workspace details
 
 5. **Start working:**
@@ -103,7 +108,9 @@ fabric-la-connector/
 
 ## Environment Variables
 
-The setup creates a `.env.example` file with the following required variables:
+The repository includes a centralized `.env.example` file in the root folder that contains all required variables for both main monitoring and tenant governance. Copy this file to your working directories as needed.
+
+Required variables include:
 
 ```env
 # Azure AD App Registration
