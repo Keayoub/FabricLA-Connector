@@ -36,10 +36,12 @@ This guide will help you get started with Fabric tenant governance and preview f
 
 ### Step 2: Configure Environment (2 minutes)
 
-1. Copy the example environment file:
+1. Copy the master environment file from the root folder:
    ```cmd
-   copy .env.example .env
+   copy ..\\.env.example .env
    ```
+   
+   > 💡 **Note**: The root `.env.example` contains configuration for both main monitoring and tenant governance. You're copying it to the fabric-governance folder for this governance setup.
 
 2. Edit `.env` and paste the values from Step 1:
    ```ini
@@ -48,9 +50,11 @@ This guide will help you get started with Fabric tenant governance and preview f
    LOG_ANALYTICS_WORKSPACE_ID=<from deployment output>
    ```
 
-3. Add your Fabric tenant ID:
+3. Add your Fabric tenant ID and credentials:
    ```ini
    FABRIC_TENANT_ID=<your-fabric-tenant-id>
+   FABRIC_APP_ID=<your-service-principal-id>
+   FABRIC_APP_SECRET=<your-service-principal-secret>
    ```
 
 ### Step 3: Install Python Dependencies (3 minutes)

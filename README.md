@@ -36,6 +36,36 @@ pip install -e .
 python -c "from fabricla_connector import run_intelligent_monitoring_cycle; print('✅ Intelligent monitoring ready')"
 ```
 
+### **⚙️ Environment Configuration (Centralized)**
+
+This repository uses a **single centralized `.env.example`** file in the root folder for all configuration:
+
+```bash
+# Step 1: Copy the master .env.example to create your .env
+cp .env.example .env
+
+# Step 2: Copy to your working directories
+cp .env notebooks/.env              # For main monitoring
+cp .env fabric-governance/.env      # For tenant governance
+
+# Step 3: Edit each .env with your specific values
+```
+
+**Why centralized?**
+- ✅ **Single source of truth** - One file to maintain
+- ✅ **No duplication** - Changes propagate from one place
+- ✅ **Complete coverage** - All variables for both main monitoring and governance
+- ✅ **Clear documentation** - Comprehensive comments and examples
+
+The `.env.example` includes:
+- Azure AD App Registration (Service Principal)
+- Azure Monitor configuration (DCE, DCR, Log Analytics)
+- Fabric workspace and capacity settings
+- Stream names for all monitoring scenarios
+- Authentication methods and debugging options
+
+See the [Environment Configuration Guide](#2-configure-environment) below for detailed setup.
+
 ### **Authentication Setup**
 ```bash
 # Simplest: Azure CLI login
@@ -245,16 +275,36 @@ terraform apply -var-file="terraform.tfvars"
 ```
 
 ### **2. Configure Environment**
+
+**Copy and configure the environment file:**
 ```bash
-# Required environment variables
+# Copy the master .env.example from root to your working directory
+cp .env.example .env
+
+# For notebooks (main monitoring):
+cp .env notebooks/.env
+
+# For tenant governance:
+cp .env fabric-governance/.env
+
+# Edit .env with your actual values
+```
+
+**Required environment variables** (see `.env.example` for complete list):
+```bash
+# Azure AD & Fabric
 FABRIC_TENANT_ID=your-tenant-id
 FABRIC_APP_ID=your-service-principal-id
 FABRIC_APP_SECRET=your-service-principal-secret
+FABRIC_WORKSPACE_ID=your-workspace-id
 
 # Azure Monitor configuration (from infrastructure deployment)
-DCR_ENDPOINT_HOST=your-dce.monitor.azure.com
-DCR_IMMUTABLE_ID=dcr-xxxxxxxxxxxxxxxx
+AZURE_MONITOR_DCE_ENDPOINT=https://your-dce.monitor.azure.com
+AZURE_MONITOR_DCR_IMMUTABLE_ID=dcr-xxxxxxxxxxxxxxxx
+LOG_ANALYTICS_WORKSPACE_ID=your-workspace-id
 ```
+
+> 💡 **Tip**: A single `.env.example` file in the root contains all configuration for both main monitoring and tenant governance. Copy it to the appropriate folders and customize as needed.
 
 ### **3. Start Monitoring**
 
