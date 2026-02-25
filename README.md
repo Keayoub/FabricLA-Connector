@@ -91,10 +91,10 @@ See [setup/README.md](setup/README.md) for detailed documentation.
 
 | **Data Source** | **Information Collected** | **Custom Table** | **Status** |
 |-----------------|---------------------------|------------------|------------|
-| **Pipelines & Dataflows** | Execution status, performance metrics, errors | `FabricPipelineRun_CL`, `FabricDataflowRun_CL` | ✅ Available |
+| **Pipelines & Dataflows** | Execution status, duration, failure reason, activity-level details | `FabricPipelineRun_CL`, `FabricDataflowRun_CL` | ✅ Available |
 | **Dataset Refresh** | Refresh operations, duration, failure analysis | `FabricDatasetRefresh_CL`, `FabricDatasetMetadata_CL` | ✅ Available |
-| **User Activity** | Access patterns, security events, usage analytics | `FabricUserActivity_CL` | ✅ Available |
-| **Capacity Metrics** | Resource utilization, workload distribution | `FabricCapacityMetrics_CL`, `FabricCapacityWorkloads_CL` | ✅ Available |
+| **User Activity** | Tenant-wide audit events via Power BI Admin API (`activityevents`). Requires `Tenant.Read.All`. | `FabricUserActivity_CL` | ✅ Available |
+| **Capacity Workloads** | Workload state (Enabled/Disabled) and max memory % per workload type via Power BI API | `FabricCapacityMetrics_CL` | ✅ Available |
 | **Spark Execution** | Spark applications, Livy sessions, logs, metrics | `FabricSparkApplications_CL`, `FabricSparkLogs_CL` | ✅ Available |
 | **Workspace Configuration** | OAP settings, security policies, Git integration, compliance | `FabricWorkspaceConfig_CL` | 📓 Notebook only |
 | **Access Permissions** | User roles, item permissions, capacity assignments | `FabricPermissions_CL` | 🔜 Planned |

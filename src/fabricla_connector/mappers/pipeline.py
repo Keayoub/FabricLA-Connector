@@ -43,13 +43,15 @@ class PipelineRunMapper(BaseMapper):
             "PipelineId": pipeline_id,
             "PipelineName": pipeline_name,
             "RunId": run.get('id'),
+            "ItemId": run.get('itemId'),
             "Status": run.get('status'),
             "StartTime": start_time,
             "EndTime": end_time,
             "DurationMs": duration_ms,
             "InvokeType": run.get('invokeType'),
             "JobType": run.get('jobType'),
-            "RootActivityRunId": run.get('rootActivityRunId')
+            "RootActivityId": run.get('rootActivityId'),
+            "FailureReason": run.get('failureReason')
         }
 
 
@@ -176,10 +178,13 @@ class DataflowRunMapper(BaseMapper):
             "DataflowId": dataflow_id,
             "DataflowName": dataflow_name,
             "RunId": run.get('id'),
+            "ItemId": run.get('itemId'),
             "Status": run.get('status'),
             "StartTime": start_time,
             "EndTime": end_time,
             "DurationMs": duration_ms,
             "InvokeType": run.get('invokeType'),
-            "JobType": run.get('jobType')
+            "JobType": run.get('jobType'),
+            "RootActivityId": run.get('rootActivityId'),
+            "FailureReason": run.get('failureReason')
         }

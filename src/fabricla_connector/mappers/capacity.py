@@ -13,22 +13,21 @@ class CapacityMetricMapper(BaseMapper):
     @staticmethod
     def map(capacity_id: str, metric: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Map capacity utilization metric to Log Analytics schema.
-        
+        Map a Power BI capacity workload state entry to Log Analytics schema.
+
         Args:
             capacity_id: Fabric capacity ID
-            metric: Raw capacity metric data from API
-            
+            metric: Raw workload entry from
+                    GET /v1.0/myorg/capacities/{id}/workloads
+                    Expected keys: name, state, maxMemoryPercentageSetByUser
+
         Returns:
-            Mapped capacity metric data
+            Mapped capacity workload record
         """
         return {
-            "TimeGenerated": metric.get('timestamp') or iso_now(),
+            "TimeGenerated": iso_now(),
             "CapacityId": capacity_id,
-            "WorkloadType": metric.get('workloadType'),
-            "CpuPercentage": metric.get('cpuPercentage'),
-            "MemoryPercentage": metric.get('memoryPercentage'),
-            "ActiveRequests": metric.get('activeRequests'),
-            "QueuedRequests": metric.get('queuedRequests'),
-            "Timestamp": metric.get('timestamp')
+            "WorkloadName": metric.get('name'),
+            "WorkloadState": metric.get('state'),       # Enabled / Disabled / Unsupported
+            "MaxMemoryPercentage": metric.get('maxMemoryPercentageSetByUser'),
         }

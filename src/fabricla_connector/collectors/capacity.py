@@ -7,9 +7,15 @@ from .base import BaseCollector
 
 class CapacityUtilizationCollector(BaseCollector):
     """
-    Collector for capacity utilization monitoring.
-    
-    Collects capacity-level metrics and workload statistics.
+    Collector for capacity workload state monitoring.
+
+    Collects current workload state (Enabled/Disabled/Unsupported) and
+    max memory % for each workload type via the Power BI REST API:
+    GET https://api.powerbi.com/v1.0/myorg/capacities/{capacityId}/workloads
+
+    Note: For time-series CU% / memory utilization metrics, configure Azure
+    Monitor diagnostic settings on the capacity resource, or use the Fabric
+    Capacity Metrics Power BI app.
     """
     
     def __init__(self, capacity_id: str, lookback_hours: int = 24, workspace_id: str = ""):

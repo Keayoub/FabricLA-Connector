@@ -7,10 +7,13 @@ from .base import BaseCollector
 
 class UserActivityCollector(BaseCollector):
     """
-    Collector for user activity monitoring.
-    
-    Requires admin permissions in Fabric.
-    Collects user interactions, item access, and workspace activities.
+    Collector for user activity monitoring via the Power BI Admin Activity Events API.
+
+    API: GET https://api.powerbi.com/v1.0/myorg/admin/activityevents
+    - Requires Tenant.Read.All scope (delegated) or service principal auth.
+    - Tenant-wide: returns all activity events, not scoped to a single workspace.
+    - startDateTime and endDateTime must be on the same UTC day; max 28-day lookback.
+    - Rate limit: 200 requests/hour.
     """
     
     def collect(self) -> Iterator[Dict[str, Any]]:

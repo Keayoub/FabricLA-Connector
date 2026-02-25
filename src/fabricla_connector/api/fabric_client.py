@@ -310,82 +310,133 @@ class FabricAPIClient:
     # === Capacity Operations ===
     
     def get_capacity_utilization(
-        self, 
+        self,
         capacity_id: str,
         lookback_hours: Optional[int] = None
     ) -> List[Dict]:
         """
-        Get capacity utilization metrics.
-        
+        Get current workload state for a capacity via the Power BI REST API.
+
+        API: GET https://api.powerbi.com/v1.0/myorg/capacities/{capacityId}/workloads
+        Returns the enabled/disabled state and max memory % for each workload type
+        (Dataflows, AIML, Datamart, etc.).
+
+        Note: For time-series utilization metrics (CU%, memory%), configure
+        Azure Monitor diagnostic settings on the capacity resource or use the
+        Fabric Capacity Metrics Power BI app.
+
         Args:
-            capacity_id: Fabric capacity ID
-            lookback_hours: Optional filter by time window
-            
+            capacity_id: Fabric capacity ID.
+            lookback_hours: Unused (workload state is current, not time-series).
+
         Returns:
-            List of capacity metrics
+            List of workload state dicts with keys: name, state,
+            maxMemoryPercentageSetByUser.
         """
         try:
-            data = self.get(
-                f"capacities/{capacity_id}/workloads",
-                context=f"get capacity utilization for {capacity_id}"
-            )
-            
-            metrics = data.get('value', [])
-            
-            # Filter by lookback if specified
-            if lookback_hours:
-                from ..utils import parse_iso
-                since_time = datetime.now() - timedelta(hours=lookback_hours)
-                filtered_metrics = []
-                for m in metrics:
-                    timestamp = parse_iso(m.get('timestamp'))
-                    if timestamp and timestamp >= since_time:
-                        filtered_metrics.append(m)
-                metrics = filtered_metrics
-            
-            return metrics
+            url = f"https://api.powerbi.com/v1.0/myorg/capacities/{capacity_id}/workloads"
+            response = self.session.get(url, timeout=60)
+
+            if response.status_code == 200:
+                return response.json().get("value", [])
+            elif response.status_code in (401, 403):
+                print(
+                    f"WARNING: {response.status_code} on capacity workloads - "
+                    "requires Capacity.Read.All scope."
+                )
+                return []
+            else:
+                print(
+                    f"WARNING: Capacity workloads API returned {response.status_code}: "
+                    f"{response.text[:200]}"
+                )
+                return []
         except FabricAPIException:
             return []
     
     # === Admin Operations ===
-    
+
     def get_user_activities(
-        self, 
+        self,
         workspace_id: str,
         lookback_hours: Optional[int] = None
     ) -> List[Dict]:
         """
-        Get user activity logs (requires admin permissions).
-        
+        Get user activity logs via the Power BI Admin Activity Events API.
+
+        API: GET https://api.powerbi.com/v1.0/myorg/admin/activityevents
+        Requires Tenant.Read.All scope (delegated) or service principal auth.
+        Rate limit: 200 requests/hour. startDateTime and endDateTime must be on
+        the same UTC day and within the last 28 days.
+
         Args:
-            workspace_id: Fabric workspace ID
-            lookback_hours: Optional filter by time window
-            
+            workspace_id: Preserved for backward compatibility; this API is
+                          tenant-wide (not scoped to a single workspace).
+            lookback_hours: Hours to look back. Capped at 24h (same-day
+                            constraint of the API). Defaults to 1h.
+
         Returns:
-            List of user activities
+            List of activity event dicts (activityEventEntities).
         """
+        from datetime import timezone
+
         try:
-            data = self.get(
-                f"admin/workspaces/{workspace_id}/activities",
-                context=f"get user activity for workspace {workspace_id}"
-            )
-            
-            activities = data.get('value', [])
-            
-            # Filter by lookback if specified
-            if lookback_hours:
-                from ..utils import parse_iso
-                since_time = datetime.now() - timedelta(hours=lookback_hours)
-                filtered_activities = []
-                for act in activities:
-                    creation_time = parse_iso(act.get('CreationTime'))
-                    if creation_time and creation_time >= since_time:
-                        filtered_activities.append(act)
-                activities = filtered_activities
-            
-            return activities
+            hours = min(lookback_hours or 1, 24)
+            end_dt = datetime.now(timezone.utc)
+            start_dt = end_dt - timedelta(hours=hours)
+
+            # API requires datetime wrapped in single quotes
+            def _fmt(dt: datetime) -> str:
+                return f"'{dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')}'"
+
+            url = "https://api.powerbi.com/v1.0/myorg/admin/activityevents"
+            base_params = {
+                "startDateTime": _fmt(start_dt),
+                "endDateTime": _fmt(end_dt),
+            }
+
+            all_activities: List[Dict] = []
+            continuation_token = None
+
+            while True:
+                params = (
+                    {"continuationToken": continuation_token}
+                    if continuation_token
+                    else base_params
+                )
+                response = self.session.get(url, params=params, timeout=60)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    all_activities.extend(data.get("activityEventEntities", []))
+                    continuation_token = data.get("continuationToken")
+                    if not continuation_token:
+                        break
+                elif response.status_code == 429:
+                    retry_after = int(response.headers.get("Retry-After", 60))
+                    print(f"WARNING: 429 Rate limited on activity events - retry after {retry_after}s")
+                    raise FabricRateLimitError(
+                        "Rate limited: activity events",
+                        retry_after=retry_after,
+                        status_code=429,
+                    )
+                elif response.status_code in (401, 403):
+                    print(
+                        f"WARNING: {response.status_code} on activity events - "
+                        "requires Tenant.Read.All scope or service principal auth."
+                    )
+                    return []
+                else:
+                    print(
+                        f"WARNING: Activity events API returned {response.status_code}: "
+                        f"{response.text[:200]}"
+                    )
+                    return []
+
+            return all_activities
+
         except FabricAuthorizationError as e:
-            print(f"[Warning] User activity requires admin permissions: {e}")
+            print(f"[Warning] User activity requires Tenant.Read.All permissions: {e}")
             return []
         except FabricAPIException:
             return []
