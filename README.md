@@ -2,21 +2,11 @@
 
 A comprehensive **Python framework** that collects operational data from Microsoft Fabric REST APIs and ingests it into **Azure Log Analytics** for monitoring, analysis, and alerting.
 
-## ✨ **NEW: Intelligent Monitoring with Smart Detection**
+## ✨ **Quick Start: One-Line Collection**
 
-The framework now includes **intelligent monitoring capabilities** that automatically detect Microsoft's workspace monitoring and adapt collection strategy to avoid conflicts while maximizing unique value.
-
-### **🧠 Smart Features**
-- **Automatic Conflict Detection**: Detects Microsoft's workspace monitoring via REST API
-- **Intelligent Strategy Selection**: Auto-chooses the best collection strategy
-- **Backwards Compatibility**: Works with customers not using workspace monitoring
-- **Unique Value Focus**: Prioritizes data not covered by Microsoft's official monitoring
-
-### **📋 Quick Intelligent Start**
 ```python
 from fabricla_connector import run_intelligent_monitoring_cycle
 
-# One-line intelligent monitoring - adapts automatically
 result = run_intelligent_monitoring_cycle(
     workspace_id="your-workspace-id",
     capacity_id="your-capacity-id"  # Optional
@@ -33,7 +23,7 @@ cd FabricLA-Connector
 pip install -e .
 
 # Test intelligent monitoring
-python -c "from fabricla_connector import run_intelligent_monitoring_cycle; print('✅ Intelligent monitoring ready')"
+python -c "from fabricla_connector import run_intelligent_monitoring_cycle; print('OK: Ready');"
 ```
 
 ### **⚙️ Environment Configuration (Centralized)**
@@ -45,8 +35,7 @@ This repository uses a **single centralized `.env.example`** file in the root fo
 cp .env.example .env
 
 # Step 2: Copy to your working directories
-cp .env notebooks/.env              # For main monitoring
-cp .env fabric-governance/.env      # For tenant governance
+cp .env notebooks/.env              # For notebook monitoring
 
 # Step 3: Edit each .env with your specific values
 ```
@@ -54,7 +43,7 @@ cp .env fabric-governance/.env      # For tenant governance
 **Why centralized?**
 - ✅ **Single source of truth** - One file to maintain
 - ✅ **No duplication** - Changes propagate from one place
-- ✅ **Complete coverage** - All variables for both main monitoring and governance
+- ✅ **Complete coverage** - All variables for all monitoring scenarios
 - ✅ **Clear documentation** - Comprehensive comments and examples
 
 The `.env.example` includes:
@@ -100,127 +89,15 @@ See [setup/README.md](setup/README.md) for detailed documentation.
 
 ## 📊 What This Framework Monitors
 
-| **Data Source** | **Information Collected** | **Custom Table** |
-|-----------------|---------------------------|------------------|
-| **Pipelines & Dataflows** | Execution status, performance metrics, errors | `FabricPipelineRun_CL`, `FabricDataflowRun_CL` |
-| **Dataset Refresh** | Refresh operations, duration, failure analysis | `FabricDatasetRefresh_CL`, `FabricDatasetMetadata_CL` |
-| **User Activity** | Access patterns, security events, usage analytics | `FabricUserActivity_CL` |
-| **Capacity Metrics** | Resource utilization, workload distribution | `FabricCapacityMetrics_CL`, `FabricCapacityWorkloads_CL` |
-| **🆕 Workspace Configuration** | OAP settings, security policies, Git integration, compliance | `FabricWorkspaceConfig_CL` |
-| **Spark Execution** | Spark applications, logs, metrics, network traffic | `FabricSparkApplications_CL`, `FabricSparkLogs_CL` |
-| **Access Permissions** | User roles, item permissions, capacity assignments | `FabricPermissions_CL` |
-
-## 🔧 Technical Positioning: Complementary Monitoring Architecture
-
-### **Microsoft's Native Monitoring Capabilities**
-
-Microsoft provides several official monitoring solutions with different technical scopes:
-
-#### **[Workspace Monitoring (Preview)](https://learn.microsoft.com/en-us/fabric/admin/monitoring-workspace)**
-- **Technical Implementation**: Creates EventHouse database in workspace
-- **Data Retention**: 30 days (non-configurable)  
-- **Coverage**: User activities, semantic model operations, Real-Time Intelligence logs
-- **Access Method**: KQL queries against workspace EventHouse
-- **Limitations**: Preview feature, limited retention, specific data sources only
-
-#### **[Fabric Unified Admin Monitoring (FUAM)](https://github.com/microsoft/fabric-toolbox/tree/main/monitoring/fabric-unified-admin-monitoring)**
-- **Technical Implementation**: PowerBI reports with Fabric Admin APIs
-- **Scope**: Tenant-wide administrative oversight
-- **Coverage**: Cross-workspace governance, user management, security monitoring
-- **Access Method**: PowerBI dashboards and reports
-- **Target**: Fabric administrators and executives
-
-### **FabricLA-Connector Technical Differentiation**
-
-#### **Architectural Differences**
-```python
-# Microsoft Workspace Monitoring
-# - EventHouse database (30-day retention)  
-# - Native KQL queries
-# - Limited to specific data sources
-
-# FabricLA-Connector
-# - Azure Log Analytics (configurable retention)
-# - Custom DCR schemas with validation
-# - Programmable collection logic
-# - Full Azure Monitor ecosystem integration
-```
-
-#### **Technical Implementation Patterns**
-
-```python
-# Intelligent conflict detection
-from fabricla_connector.monitoring_detection import WorkspaceMonitoringDetector
-
-detector = WorkspaceMonitoringDetector()
-status = detector.detect_workspace_monitoring(workspace_id, token)
-
-if status.workspace_monitoring_enabled:
-    # Skip user activity collection - covered by Microsoft
-    # Focus on unique operational data
-    collect_sources = ['pipeline_execution', 'capacity_utilization']
-else:
-    # Collect all sources - no Microsoft monitoring present
-    collect_sources = ['user_activity', 'dataset_refresh', 'pipeline_execution', 'capacity_utilization']
-```
-
-### **Integration Patterns**
-
-#### **Complementary Deployment Architecture**
-```yaml
-# Recommended architecture for comprehensive monitoring
-
-Microsoft Workspace Monitoring:
-  purpose: Native user activity and semantic model monitoring
-  retention: 30 days
-  query_interface: EventHouse KQL
-  
-FabricLA-Connector:
-  purpose: Operational monitoring and automation
-  retention: 2+ years (configurable)
-  query_interface: Log Analytics KQL
-  alerting: Azure Monitor rules
-  automation: Logic Apps, Functions, GitHub Actions
-  
-FUAM (Optional):
-  purpose: Administrative dashboards
-  scope: Tenant-wide governance
-  interface: PowerBI reports
-```
-
-#### **FabricLA-Connector Value Analysis**
-
-*This connector is designed as **complementary** to existing Microsoft solutions, adding operational capabilities not available elsewhere.*
-
-| **Unique Value Added** | **Existing Microsoft Solutions** | **FabricLA-Connector Enhancement** |
-|------------------------|----------------------------------|-----------------------------------|
-| **Pipeline Execution Monitoring** | ❌ No native real-time pipeline monitoring | ✅ Real-time execution tracking, activity-level details, failure analysis |
-| **Programmable Collection Logic** | ❌ Fixed schemas and collection patterns | ✅ Python framework, custom business rules, conditional collection |
-| **Azure Monitor Integration** | ❌ Limited Log Analytics integration | ✅ Full DCR/DCE implementation, custom schemas, Azure alerting |
-| **CI/CD & Infrastructure as Code** | ❌ Manual setup and configuration | ✅ Bicep/Terraform templates, Python package, GitHub Actions |
-| **Long-term Operational Trends** | ⚠️ 30-day retention in Workspace Monitoring | ✅ Multi-year retention, historical trend analysis |
-| **Custom Capacity Metrics** | ⚠️ Limited capacity visibility | ✅ Workspace-level utilization, custom thresholds, cost tracking |
-| **Intelligent Conflict Avoidance** | ❌ No coordination between solutions | ✅ Auto-detects Microsoft monitoring, adapts collection strategy |
-| **Developer Automation** | ❌ Admin-focused tools only | ✅ Python SDK, notebook templates, programmatic workflows |
-
-#### **Complementary Usage Patterns**
-
-| **Technical Scenario** | **Microsoft Native Solutions** | **+ FabricLA-Connector Value** |
-|------------------------|--------------------------------|------------------------------|
-| **User Activity Monitoring** | Use Workspace Monitoring (native) | Adds long-term retention + custom analysis |
-| **Administrative Oversight** | Use FUAM (tenant-wide) | Adds workspace-specific operational details |
-| **Fabric-to-Log Analytics** | Use native integration (basic) | Adds custom schemas, real-time collection, programmable logic |
-| **Executive Reporting** | Use PowerBI + FUAM templates | Adds operational KPIs, pipeline SLAs, capacity optimization |
-| **DevOps Workflows** | No native solution | Provides full CI/CD integration, automated monitoring deployment |
-| **Custom Business Logic** | No native solution | Enables custom collection rules, conditional logic, business-specific metrics |
-| **Multi-year Analytics** | Limited to 30-day retention | Provides configurable retention, historical trend analysis |
-| **Real-time Alerting** | Basic PowerBI alerts | Azure Monitor action groups, Logic Apps, custom automation |
-
-### **Technical References**
-- **Microsoft Fabric Toolbox**: https://github.com/microsoft/fabric-toolbox
-- **Workspace Monitoring Documentation**: https://learn.microsoft.com/en-us/fabric/admin/monitoring-workspace
-- **Fabric Admin APIs**: https://learn.microsoft.com/en-us/rest/api/fabric/admin
-- **Azure Monitor Logs Ingestion**: https://learn.microsoft.com/en-us/azure/azure-monitor/logs/logs-ingestion-api-overview
+| **Data Source** | **Information Collected** | **Custom Table** | **Status** |
+|-----------------|---------------------------|------------------|------------|
+| **Pipelines & Dataflows** | Execution status, performance metrics, errors | `FabricPipelineRun_CL`, `FabricDataflowRun_CL` | ✅ Available |
+| **Dataset Refresh** | Refresh operations, duration, failure analysis | `FabricDatasetRefresh_CL`, `FabricDatasetMetadata_CL` | ✅ Available |
+| **User Activity** | Access patterns, security events, usage analytics | `FabricUserActivity_CL` | ✅ Available |
+| **Capacity Metrics** | Resource utilization, workload distribution | `FabricCapacityMetrics_CL`, `FabricCapacityWorkloads_CL` | ✅ Available |
+| **Spark Execution** | Spark applications, Livy sessions, logs, metrics | `FabricSparkApplications_CL`, `FabricSparkLogs_CL` | ✅ Available |
+| **Workspace Configuration** | OAP settings, security policies, Git integration, compliance | `FabricWorkspaceConfig_CL` | 📓 Notebook only |
+| **Access Permissions** | User roles, item permissions, capacity assignments | `FabricPermissions_CL` | 🔜 Planned |
 
 ## 🔧 Framework Components
 
@@ -242,10 +119,15 @@ from fabricla_connector.ingestion import FabricIngestion
 
 ### **Data Collection Notebooks** (`/notebooks/`)
 - `framework_quickstart_example.ipynb` - Getting started guide
-- `fabric_pipeline_dataflow_collector.ipynb` - Pipeline monitoring
+- `intelligent_monitoring_example.ipynb` - Intelligent monitoring with auto-detection
+- `fabric_pipeline_dataflow_collector.ipynb` - Pipeline & dataflow monitoring
 - `fabric_dataset_refresh_monitoring.ipynb` - Dataset refresh tracking
 - `fabric_user_activity_monitoring.ipynb` - User activity analytics
-- `fabric_capacity_utilization_monitoring.ipynb` - Capacity monitoring
+- `fabric_capacity_utilization_monitoring.ipynb` - Capacity utilization monitoring
+- `fabric_spark_monitoring.ipynb` - Spark application & session monitoring
+- `workspace_config_monitoring.ipynb` - Workspace configuration and compliance
+- `ama_gateway_deployment_guide.ipynb` - Azure Monitor Agent gateway setup
+- `validate_environment.ipynb` - Environment validation and diagnostics
 
 ### **Infrastructure Deployment** (`/infra/`)
 - **Bicep**: `bicep/main.bicep` - Log Analytics workspace + DCR + custom tables
@@ -284,9 +166,6 @@ cp .env.example .env
 # For notebooks (main monitoring):
 cp .env notebooks/.env
 
-# For tenant governance:
-cp .env fabric-governance/.env
-
 # Edit .env with your actual values
 ```
 
@@ -304,16 +183,25 @@ AZURE_MONITOR_DCR_IMMUTABLE_ID=dcr-xxxxxxxxxxxxxxxx
 LOG_ANALYTICS_WORKSPACE_ID=your-workspace-id
 ```
 
-> 💡 **Tip**: A single `.env.example` file in the root contains all configuration for both main monitoring and tenant governance. Copy it to the appropriate folders and customize as needed.
+> 💡 **Tip**: A single `.env.example` file in the root contains all configuration. Copy it to your working directory and customize as needed.
 
 ### **3. Start Monitoring**
 
 **Framework Approach (Recommended):**
 ```python
-from fabricla_connector.workflows import run_full_monitoring_cycle
+from fabricla_connector import run_intelligent_monitoring_cycle
 
-# Complete monitoring for all data sources
-result = run_full_monitoring_cycle(
+result = run_intelligent_monitoring_cycle(
+    workspace_id="your-workspace-id",
+    capacity_id="your-capacity-id"  # Optional
+)
+```
+
+**Or use the enhanced full cycle for explicit control:**
+```python
+from fabricla_connector.workflows import run_full_monitoring_cycle_enhanced
+
+result = run_full_monitoring_cycle_enhanced(
     workspace_id="your-workspace-id",
     capacity_id="your-capacity-id"
 )
@@ -360,8 +248,8 @@ See [tools/README.md](tools/README.md) for comprehensive testing and upload opti
 ## 📚 Documentation
 
 - **[Local Testing Guide](tools/README.md)** - Development and upload tools
-- **[Deployment Options](DEPLOYMENT_OPTIONS_GUIDE.md)** - Staging vs auto-publish
-- **[Packaging Guide](PACKAGING_BEST_PRACTICES.md)** - Modern Python packaging
+- **[Environment Setup Guide](docs/EnvironmentSetup.md)** - Fabric environment setup and dependency management
+- **[Setup Scripts](setup/README.md)** - Automated Fabric runtime environment setup
 
 ## 🤝 Contributing
 
@@ -375,5 +263,3 @@ See [tools/README.md](tools/README.md) for comprehensive testing and upload opti
 MIT License - See LICENSE file for details
 
 ---
-
-**🚀 Ready to monitor your Microsoft Fabric environment?** Start with the Quick Start guide above!
