@@ -51,7 +51,7 @@ dependencies = [
     "filelock<3.12,>=3.8.0",
     "PyJWT>=2.6.0,<3.0.0",
     # Constrain fsspec to versions compatible with datasets 2.19.x
-    "fsspec<=2024.3.1,>=2023.1.0"
+    "fsspec>=2023.1.0,<=2026.3.0"
 ]
 
 [project.urls]
