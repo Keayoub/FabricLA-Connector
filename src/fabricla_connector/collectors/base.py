@@ -4,6 +4,7 @@ Base collector class for all Fabric data collectors.
 from abc import ABC, abstractmethod
 from typing import Iterator, Dict, Any
 from ..api import FabricAPIClient
+from ..utils import validate_workspace_id
 
 
 class BaseCollector(ABC):
@@ -19,9 +20,14 @@ class BaseCollector(ABC):
         Initialize collector.
         
         Args:
-            workspace_id: Fabric workspace ID
+            workspace_id: Fabric workspace ID (must be a valid GUID)
             lookback_hours: Time window for data collection in hours
         """
+        if workspace_id and not validate_workspace_id(workspace_id):
+            raise ValueError(
+                f"Invalid workspace_id format: '{workspace_id}'. "
+                "Expected a UUID, e.g. 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'."
+            )
         self.workspace_id = workspace_id
         self.lookback_hours = lookback_hours
         self._client: FabricAPIClient = None  # type: ignore

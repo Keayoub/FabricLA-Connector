@@ -1,9 +1,12 @@
 """
 Retry policy with exponential backoff for Azure Monitor ingestion.
 """
+import logging
 import time
 from typing import Callable, TypeVar, Any
 from ..telemetry import log_event
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
@@ -135,8 +138,8 @@ class RetryPolicy:
                         if match:
                             retry_after = int(match.group(1))
                             return min(retry_after, self.max_delay)
-            except:
-                pass
+            except (ValueError, AttributeError, IndexError):
+                logger.debug("Could not parse Retry-After from error message: %s", error_msg[:200])
         
         # Calculate exponential or linear backoff
         if self.exponential:

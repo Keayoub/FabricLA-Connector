@@ -33,8 +33,8 @@ def estimate_payload_size(records: List[Dict[str, Any]]) -> int:
     try:
         # Serialize to JSON to get accurate size
         return len(json.dumps(records).encode('utf-8'))
-    except:
-        # Fallback: rough estimate
+    except (TypeError, ValueError):
+        # Fallback: rough estimate when records contain non-serialisable objects
         return sum(len(str(r)) for r in records)
 
 

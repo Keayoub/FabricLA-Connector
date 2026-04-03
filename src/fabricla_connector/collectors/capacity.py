@@ -3,6 +3,7 @@ Capacity utilization data collectors.
 """
 from typing import Iterator, Dict, Any
 from .base import BaseCollector
+from ..utils import validate_workspace_id
 
 
 class CapacityUtilizationCollector(BaseCollector):
@@ -23,10 +24,15 @@ class CapacityUtilizationCollector(BaseCollector):
         Initialize capacity collector.
         
         Args:
-            capacity_id: Fabric capacity ID
+            capacity_id: Fabric capacity ID (must be a valid GUID)
             lookback_hours: Time window for data collection
             workspace_id: Optional workspace ID (not used for capacity metrics)
         """
+        if not validate_workspace_id(capacity_id):
+            raise ValueError(
+                f"Invalid capacity_id format: '{capacity_id}'. "
+                "Expected a UUID, e.g. 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'."
+            )
         super().__init__(workspace_id=workspace_id or capacity_id, lookback_hours=lookback_hours)
         self.capacity_id = capacity_id
     

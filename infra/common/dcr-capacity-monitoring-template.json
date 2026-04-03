@@ -42,10 +42,16 @@
               { "name": "TimeGenerated", "type": "datetime" },
               { "name": "WorkspaceId", "type": "string" },
               { "name": "DatasetId", "type": "string" },
+              { "name": "DatasetName", "type": "string" },
               { "name": "RefreshId", "type": "string" },
               { "name": "Status", "type": "string" },
               { "name": "StartTime", "type": "datetime" },
-              { "name": "EndTime", "type": "datetime" }
+              { "name": "EndTime", "type": "datetime" },
+              { "name": "DurationMs", "type": "long" },
+              { "name": "InvokeType", "type": "string" },
+              { "name": "JobType", "type": "string" },
+              { "name": "RootActivityId", "type": "string" },
+              { "name": "FailureReason", "type": "string" }
             ]
           },
           "Custom-FabricDatasetMetadata_CL": {
@@ -54,8 +60,12 @@
               { "name": "WorkspaceId", "type": "string" },
               { "name": "DatasetId", "type": "string" },
               { "name": "DatasetName", "type": "string" },
-              { "name": "TableCount", "type": "int" },
-              { "name": "SizeMB", "type": "long" }
+              { "name": "Description", "type": "string" },
+              { "name": "Type", "type": "string" },
+              { "name": "CreatedDate", "type": "datetime" },
+              { "name": "ModifiedDate", "type": "datetime" },
+              { "name": "CreatedBy", "type": "string" },
+              { "name": "ModifiedBy", "type": "string" }
             ]
           },
           "Custom-FabricCapacityMetrics_CL": {

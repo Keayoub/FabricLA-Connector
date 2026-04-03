@@ -13,9 +13,11 @@ from pathlib import Path
 
 def run_command(command, description):
     """Run a command and handle errors gracefully."""
+    import shlex
     print(f"Running: {description}...")
     try:
-        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+        args = shlex.split(command) if isinstance(command, str) else command
+        result = subprocess.run(args, shell=False, check=True, capture_output=True, text=True)
         print(f"Success: {description} completed successfully")
         return True
     except subprocess.CalledProcessError as e:

@@ -24,34 +24,33 @@ class DatasetRefreshMapper(BaseMapper):
         Returns:
             Mapped dataset refresh data
         """
-        start_time = refresh.get('startTime')
-        end_time = refresh.get('endTime')
+        start_time = refresh.get('startTimeUtc')
+        end_time = refresh.get('endTimeUtc')
         duration_ms = None
-        
+
         if start_time and end_time:
             try:
                 start_dt = parse_iso(start_time)
                 end_dt = parse_iso(end_time)
                 if start_dt and end_dt:
                     duration_ms = int((end_dt - start_dt).total_seconds() * 1000)
-            except:
+            except (TypeError, ValueError, OSError):
                 pass
-        
+
         return {
             "TimeGenerated": end_time or start_time or iso_now(),
             "WorkspaceId": workspace_id,
             "DatasetId": dataset_id,
             "DatasetName": dataset_name,
             "RefreshId": refresh.get('id'),
-            "RefreshType": refresh.get('refreshType'),
             "Status": refresh.get('status'),
             "StartTime": start_time,
             "EndTime": end_time,
             "DurationMs": duration_ms,
-            "ServicePrincipalId": refresh.get('servicePrincipalId'),
-            "ErrorCode": refresh.get('errorCode'),
-            "ErrorMessage": refresh.get('errorMessage'),
-            "RequestId": refresh.get('requestId')
+            "InvokeType": refresh.get('invokeType'),
+            "JobType": refresh.get('jobType'),
+            "RootActivityId": refresh.get('rootActivityId'),
+            "FailureReason": refresh.get('failureReason')
         }
 
 

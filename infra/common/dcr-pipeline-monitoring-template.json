@@ -42,12 +42,17 @@
               { "name": "TimeGenerated", "type": "datetime" },
               { "name": "WorkspaceId", "type": "string" },
               { "name": "PipelineId", "type": "string" },
-              { "name": "RunId", "type": "string" },
               { "name": "PipelineName", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "ItemId", "type": "string" },
               { "name": "Status", "type": "string" },
               { "name": "StartTime", "type": "datetime" },
               { "name": "EndTime", "type": "datetime" },
-              { "name": "DurationSeconds", "type": "int" }
+              { "name": "DurationMs", "type": "long" },
+              { "name": "InvokeType", "type": "string" },
+              { "name": "JobType", "type": "string" },
+              { "name": "RootActivityId", "type": "string" },
+              { "name": "FailureReason", "type": "string" }
             ]
           },
           "Custom-FabricPipelineActivityRun_CL": {
@@ -55,12 +60,20 @@
               { "name": "TimeGenerated", "type": "datetime" },
               { "name": "WorkspaceId", "type": "string" },
               { "name": "PipelineId", "type": "string" },
-              { "name": "RunId", "type": "string" },
+              { "name": "PipelineName", "type": "string" },
               { "name": "ActivityName", "type": "string" },
               { "name": "ActivityType", "type": "string" },
+              { "name": "RunId", "type": "string" },
               { "name": "Status", "type": "string" },
-              { "name": "StartTime", "type": "datetime" },
-              { "name": "EndTime", "type": "datetime" }
+              { "name": "StartTimeUtc", "type": "datetime" },
+              { "name": "EndTimeUtc", "type": "datetime" },
+              { "name": "DurationMs", "type": "long" },
+              { "name": "DataRead", "type": "long" },
+              { "name": "DataWritten", "type": "long" },
+              { "name": "RecordsProcessed", "type": "long" },
+              { "name": "ExecutionStatistics", "type": "dynamic" },
+              { "name": "ErrorCode", "type": "string" },
+              { "name": "ErrorMessage", "type": "string" }
             ]
           },
           "Custom-FabricDataflowRun_CL": {
@@ -68,23 +81,42 @@
               { "name": "TimeGenerated", "type": "datetime" },
               { "name": "WorkspaceId", "type": "string" },
               { "name": "DataflowId", "type": "string" },
-              { "name": "RunId", "type": "string" },
               { "name": "DataflowName", "type": "string" },
+              { "name": "RunId", "type": "string" },
+              { "name": "ItemId", "type": "string" },
               { "name": "Status", "type": "string" },
               { "name": "StartTime", "type": "datetime" },
               { "name": "EndTime", "type": "datetime" },
-              { "name": "RowsProcessed", "type": "long" }
+              { "name": "DurationMs", "type": "long" },
+              { "name": "InvokeType", "type": "string" },
+              { "name": "JobType", "type": "string" },
+              { "name": "RootActivityId", "type": "string" },
+              { "name": "FailureReason", "type": "string" }
             ]
           },
           "Custom-FabricUserActivity_CL": {
             "columns": [
               { "name": "TimeGenerated", "type": "datetime" },
               { "name": "WorkspaceId", "type": "string" },
+              { "name": "ActivityId", "type": "string" },
               { "name": "UserId", "type": "string" },
-              { "name": "UserEmail", "type": "string" },
+              { "name": "UserKey", "type": "string" },
               { "name": "Activity", "type": "string" },
+              { "name": "Operation", "type": "string" },
+              { "name": "IsSuccess", "type": "boolean" },
+              { "name": "RequestId", "type": "string" },
+              { "name": "Workload", "type": "string" },
+              { "name": "ClientIP", "type": "string" },
+              { "name": "OrganizationId", "type": "string" },
+              { "name": "CreationTime", "type": "datetime" },
+              { "name": "ItemName", "type": "string" },
+              { "name": "WorkspaceName", "type": "string" },
               { "name": "ItemType", "type": "string" },
-              { "name": "ItemId", "type": "string" }
+              { "name": "ObjectId", "type": "string" },
+              { "name": "ArtifactId", "type": "string" },
+              { "name": "ArtifactName", "type": "string" },
+              { "name": "CapacityId", "type": "string" },
+              { "name": "CapacityName", "type": "string" }
             ]
           }
         },

@@ -127,15 +127,15 @@ def collect_livy_sessions_notebook(
     """
     Collect Livy sessions for a specific Notebook.
     
-    API: GET /v1/workspaces/{workspaceId}/notebooks/{notebookId}/spark/livySessions
-    
+    API: GET /v1/workspaces/{workspaceId}/notebooks/{notebookId}/livySessions
+
     Args:
         workspace_id: Fabric workspace ID
         notebook_id: Notebook item ID
         notebook_name: Notebook display name
         workspace_name: Optional workspace display name
         lookback_hours: Hours to look back for sessions
-        
+
     Yields:
         Dict containing Livy session data for the notebook
     """
@@ -145,16 +145,16 @@ def collect_livy_sessions_notebook(
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-        
-        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/notebooks/{notebook_id}/spark/livySessions"
-        
+
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/notebooks/{notebook_id}/livySessions"
+
         response = requests.get(url, headers=headers, timeout=30)
         data = handle_api_response(response, f"Notebook Livy Sessions - {notebook_name}")
-        
-        if not data or "sessions" not in data:
+
+        if not data or "value" not in data:
             return
-            
-        sessions = data["sessions"]
+
+        sessions = data["value"]
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
         collected_count = 0
         
@@ -198,15 +198,15 @@ def collect_livy_sessions_sparkjob(
     """
     Collect Livy sessions for a specific Spark Job Definition.
     
-    API: GET /v1/workspaces/{workspaceId}/sparkJobDefinitions/{sparkJobId}/spark/livySessions
-    
+    API: GET /v1/workspaces/{workspaceId}/sparkjobdefinitions/{sparkJobId}/livySessions
+
     Args:
         workspace_id: Fabric workspace ID
         sparkjob_id: SparkJobDefinition item ID
         sparkjob_name: SparkJobDefinition display name
         workspace_name: Optional workspace display name
         lookback_hours: Hours to look back for sessions
-        
+
     Yields:
         Dict containing Livy session data for the Spark job
     """
@@ -216,16 +216,16 @@ def collect_livy_sessions_sparkjob(
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-        
-        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/sparkJobDefinitions/{sparkjob_id}/spark/livySessions"
-        
+
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/sparkjobdefinitions/{sparkjob_id}/livySessions"
+
         response = requests.get(url, headers=headers, timeout=30)
         data = handle_api_response(response, f"SparkJob Livy Sessions - {sparkjob_name}")
-        
-        if not data or "sessions" not in data:
+
+        if not data or "value" not in data:
             return
-            
-        sessions = data["sessions"]
+
+        sessions = data["value"]
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
         collected_count = 0
         
@@ -269,15 +269,15 @@ def collect_livy_sessions_lakehouse(
     """
     Collect Livy sessions for a specific Lakehouse.
     
-    API: GET /v1/workspaces/{workspaceId}/lakehouses/{lakehouseId}/spark/livySessions
-    
+    API: GET /v1/workspaces/{workspaceId}/lakehouses/{lakehouseId}/livySessions
+
     Args:
         workspace_id: Fabric workspace ID
         lakehouse_id: Lakehouse item ID
         lakehouse_name: Lakehouse display name
         workspace_name: Optional workspace display name
         lookback_hours: Hours to look back for sessions
-        
+
     Yields:
         Dict containing Livy session data for the lakehouse
     """
@@ -287,16 +287,16 @@ def collect_livy_sessions_lakehouse(
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-        
-        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/lakehouses/{lakehouse_id}/spark/livySessions"
-        
+
+        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/lakehouses/{lakehouse_id}/livySessions"
+
         response = requests.get(url, headers=headers, timeout=30)
         data = handle_api_response(response, f"Lakehouse Livy Sessions - {lakehouse_name}")
-        
-        if not data or "sessions" not in data:
+
+        if not data or "value" not in data:
             return
-            
-        sessions = data["sessions"]
+
+        sessions = data["value"]
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
         collected_count = 0
         

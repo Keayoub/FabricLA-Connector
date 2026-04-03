@@ -34,7 +34,7 @@ class PipelineRunMapper(BaseMapper):
                 end_dt = parse_iso(end_time)
                 if start_dt and end_dt:
                     duration_ms = int((end_dt - start_dt).total_seconds() * 1000)
-            except:
+            except (TypeError, ValueError, OSError):
                 pass
         
         return {
@@ -82,7 +82,7 @@ class ActivityRunMapper(BaseMapper):
                 end_dt = parse_iso(end_time)
                 if start_dt and end_dt:
                     duration_ms = int((end_dt - start_dt).total_seconds() * 1000)
-            except:
+            except (TypeError, ValueError, OSError):
                 pass
         
         # Extract performance metrics from activity output
@@ -169,7 +169,7 @@ class DataflowRunMapper(BaseMapper):
                 end_dt = parse_iso(end_time)
                 if start_dt and end_dt:
                     duration_ms = int((end_dt - start_dt).total_seconds() * 1000)
-            except:
+            except (TypeError, ValueError, OSError):
                 pass
         
         return {

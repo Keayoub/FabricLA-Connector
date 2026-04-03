@@ -151,7 +151,7 @@ The connector uses `DefaultAzureCredential` which tries (in order):
 
 Your infrastructure is deployed with:
 
-- ✅ **DCE:** `REDACTED-DCE-SUFFIX`
+- ✅ **DCE:** `dce-fabric-monitoring-****`
 - ✅ **DCR:** `dcr-fabric-monitoring-spark` (8 streams)
 - ✅ **Workspace:** `law-fabric-monitoring`
 - ✅ **Module:** Spark Monitoring (Livy Sessions, Logs, Metrics, Resource Usage, Jobs, Notebooks)

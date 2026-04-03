@@ -456,10 +456,10 @@ python tools\create_fabric_pipeline.py \
 
 ```cmd
 # Dry-run to validate
-python tools\create_fabric_pipeline.py --workspace-id REDACTED-WORKSPACE-ID-2 --pipeline-file tools\samples\sample_pipeline.json --dry-run
+python tools\create_fabric_pipeline.py --workspace-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --pipeline-file tools\samples\sample_pipeline.json --dry-run
 
 # Create with Azure CLI auth
-python tools\create_fabric_pipeline.py --workspace-id REDACTED-WORKSPACE-ID-2 --pipeline-file tools\samples\sample_pipeline.json --use-default-credential
+python tools\create_fabric_pipeline.py --workspace-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --pipeline-file tools\samples\sample_pipeline.json --use-default-credential
 ```
 
 ### create_fabric_warehouse.py
@@ -504,7 +504,7 @@ python tools\create_fabric_warehouse.py \
 
 ```cmd
 # Create medium warehouse
-python tools\create_fabric_warehouse.py --workspace-id REDACTED-WORKSPACE-ID --size medium --use-default-credential
+python tools\create_fabric_warehouse.py --workspace-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --size medium --use-default-credential
 ```
 
 ### create_fabric_dataflow_gen2.py
@@ -555,7 +555,7 @@ python tools\create_fabric_dataflow_gen2.py \
 
 ```cmd
 # Create with Power Query M
-python tools\create_fabric_dataflow_gen2.py --workspace-id REDACTED-WORKSPACE-ID --mashup-file tools\samples\sample_mashup.pq --name "Production ETL" --use-default-credential
+python tools\create_fabric_dataflow_gen2.py --workspace-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --mashup-file tools\samples\sample_mashup.pq --name "Production ETL" --use-default-credential
 ```
 
 ### End-to-End Workflow Example
@@ -564,13 +564,13 @@ Create a complete data processing workflow in Fabric:
 
 ```cmd
 # 1. Create warehouse for storage
-python tools\create_fabric_warehouse.py --workspace-id REDACTED-WORKSPACE-ID-2 --size large --use-default-credential
+python tools\create_fabric_warehouse.py --workspace-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --size large --use-default-credential
 
 # 2. Create dataflow for ETL
-python tools\create_fabric_dataflow_gen2.py --workspace-id REDACTED-WORKSPACE-ID-2 --mashup-file my_etl.pq --name "Production ETL" --use-default-credential
+python tools\create_fabric_dataflow_gen2.py --workspace-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --mashup-file my_etl.pq --name "Production ETL" --use-default-credential
 
 # 3. Create pipeline for orchestration
-python tools\create_fabric_pipeline.py --workspace-id REDACTED-WORKSPACE-ID-2 --pipeline-file my_pipeline.json --use-default-credential
+python tools\create_fabric_pipeline.py --workspace-id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --pipeline-file my_pipeline.json --use-default-credential
 ```
 
 ### Testing with Dry-Run

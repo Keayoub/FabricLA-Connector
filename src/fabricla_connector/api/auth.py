@@ -24,7 +24,7 @@ def acquire_token(tenant: str, client_id: str, client_secret: str, scope: str) -
         raise RuntimeError(f"Failed to acquire token: {result}")
     
     token = result["access_token"]
-    print(f"SUCCESS: Token acquired for {scope}: {token[:10]}...{token[-10:]}")
+    print(f"SUCCESS: Token acquired for {scope}")
     return token
 
 
@@ -33,7 +33,7 @@ def acquire_token_managed_identity(scope: str) -> str:
     try:
         credential = ManagedIdentityCredential()
         token = credential.get_token(scope)
-        print(f"SUCCESS: Managed identity token acquired for {scope}: {token.token[:10]}...{token.token[-10:]}")
+        print(f"SUCCESS: Managed identity token acquired for {scope}")
         return token.token
     except Exception as e:
         raise RuntimeError(f"Failed to get managed identity token for {scope}: {e}")

@@ -19,10 +19,8 @@ from .collectors import (
 )
 from .ingestion import post_rows_to_dcr, AzureMonitorIngestionClient
 
-# TODO: Refactor these helper functions into new ingestion module
-# Fallback implementations (legacy_ingestion.py was removed)
+# Alias kept for backward compatibility
 post_rows_to_dcr_enhanced = post_rows_to_dcr
-create_troubleshooting_report_legacy = lambda *args, **kwargs: {"status": "not_implemented", "message": "Troubleshooting report not yet implemented in refactored ingestion"}
 
 from .config import get_config, get_ingestion_config, get_fabric_config, validate_config, get_monitoring_config
 from .api import get_fabric_token
@@ -524,7 +522,7 @@ def validate_and_test_configuration() -> Dict[str, Any]:
         print(f"\nSECURE: Testing Authentication...")
         token = get_fabric_token()
         if token:
-            print(f"   SUCCESS: Token acquired: {token[:20]}...")
+            print(f"   SUCCESS: Token acquired successfully")
             auth_test["success"] = True
         else:
             auth_test["error"] = "No token returned"

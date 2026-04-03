@@ -1,0 +1,4 @@
+# Auto-strip Jupyter notebook outputs on commit via nbstripout
+# Run `nbstripout --install` once per clone to activate
+*.ipynb filter=nbstripout
+*.ipynb diff=ipynb

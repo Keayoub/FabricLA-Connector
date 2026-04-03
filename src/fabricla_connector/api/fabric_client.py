@@ -2,6 +2,7 @@
 Fabric API client with authentication and error handling.
 Uses only official Fabric REST APIs.
 """
+import logging
 import requests
 import time
 from typing import Dict, List, Optional, Any
@@ -14,6 +15,8 @@ from .exceptions import (
     FabricResourceNotFoundError,
     FabricRateLimitError
 )
+
+logger = logging.getLogger(__name__)
 
 
 class FabricAPIClient:
@@ -54,6 +57,9 @@ class FabricAPIClient:
         if response.status_code == 200:
             return response.json()
         
+        # Log the full response body at DEBUG level before any truncation
+        logger.debug("Full API error response for '%s': %s", context, response.text)
+
         if response.status_code == 429:
             retry_after = int(response.headers.get('Retry-After', 60))
             print(f"WARNING: 429 Rate Limited - {context}")
@@ -95,7 +101,7 @@ class FabricAPIClient:
         try:
             error_data = response.json()
             error_msg = error_data.get('error', {}).get('message', f'HTTP {response.status_code}')
-        except:
+        except (ValueError, KeyError):
             error_msg = f'HTTP {response.status_code}: {response.text[:200]}'
         
         print(f"ERROR: API Error ({response.status_code}) for {context}: {error_msg}")
@@ -235,21 +241,29 @@ class FabricAPIClient:
     def get_activity_runs(self, workspace_id: str, pipeline_id: str, run_id: str) -> List[Dict]:
         """
         Get activity runs for a pipeline run.
-        
+
+        API: POST /v1/workspaces/{workspaceId}/datapipelines/pipelineruns/{runId}/queryactivityruns
+
         Args:
             workspace_id: Fabric workspace ID
-            pipeline_id: Pipeline ID
-            run_id: Run ID
-            
+            pipeline_id: Pipeline ID (unused in the API path but kept for caller compatibility)
+            run_id: Pipeline job instance / run ID
+
         Returns:
             List of activity runs
         """
         try:
-            data = self.get(
-                f"workspaces/{workspace_id}/items/{pipeline_id}/jobs/instances/{run_id}/activities",
-                context=f"get activity runs for pipeline {pipeline_id}, run {run_id}"
+            url = f"{self.BASE_URL}/workspaces/{workspace_id}/datapipelines/pipelineruns/{run_id}/queryactivityruns"
+            body = {
+                "filters": [],
+                "orderBy": [{"orderBy": "ActivityRunStart", "order": "DESC"}],
+            }
+            response = self.session.post(url, json=body)
+            data = self._handle_response(
+                response,
+                f"get activity runs for pipeline run {run_id}"
             )
-            return data.get('value', [])
+            return data if isinstance(data, list) else data.get('value', [])
         except FabricResourceNotFoundError:
             return []  # No activity runs available
     
@@ -268,42 +282,36 @@ class FabricAPIClient:
         return self.list_workspace_items(workspace_id, item_type="SemanticModel")
     
     def get_dataset_refreshes(
-        self, 
-        workspace_id: str, 
+        self,
+        workspace_id: str,
         dataset_id: str,
         lookback_hours: Optional[int] = None
     ) -> List[Dict]:
         """
-        Get refresh history for a dataset.
-        
+        Get refresh history for a dataset (Semantic Model) via the Job Scheduler API.
+
+        API: GET /v1/workspaces/{workspaceId}/items/{datasetId}/jobs/instances
+        The response is filtered to jobType == 'DefaultDatasetRefresh'.
+
         Args:
             workspace_id: Fabric workspace ID
-            dataset_id: Dataset ID
+            dataset_id: Semantic Model / dataset item ID
             lookback_hours: Optional filter by time window
-            
+
         Returns:
-            List of refresh records
+            List of refresh job instance records
         """
         try:
-            data = self.get(
-                f"workspaces/{workspace_id}/items/{dataset_id}/refreshes",
-                context=f"get refresh history for dataset {dataset_id}"
+            instances = self.list_item_job_instances(
+                workspace_id,
+                dataset_id,
+                lookback_hours=lookback_hours
             )
-            
-            refreshes = data.get('value', [])
-            
-            # Filter by lookback if specified
-            if lookback_hours:
-                from ..utils import parse_iso
-                since_time = datetime.now() - timedelta(hours=lookback_hours)
-                filtered_refreshes = []
-                for ref in refreshes:
-                    start_time = parse_iso(ref.get('startTime'))
-                    if start_time and start_time >= since_time:
-                        filtered_refreshes.append(ref)
-                refreshes = filtered_refreshes
-            
-            return refreshes
+            # Keep only dataset refresh jobs; if jobType is absent include the record
+            return [
+                inst for inst in instances
+                if inst.get('jobType', 'DefaultDatasetRefresh') == 'DefaultDatasetRefresh'
+            ]
         except FabricAPIException:
             return []
     

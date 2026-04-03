@@ -4,6 +4,7 @@ Data collectors for Microsoft Fabric workloads.
 This package provides collector classes for gathering operational data from Fabric.
 Each collector focuses on a specific workload type and yields records ready for ingestion.
 """
+from typing import Any
 from .base import BaseCollector
 from .pipeline import PipelineDataCollector
 from .dataset import DatasetRefreshCollector
@@ -25,17 +26,45 @@ from .spark import (
     collect_spark_applications_item
 )
 
-# Legacy collector classes - these need to be implemented
-# For now, they are None placeholders (legacy_collectors.py was removed)
-OneLakeStorageCollector = None
-SparkJobCollector = None
-NotebookCollector = None
-GitIntegrationCollector = None
-DataLineageCollector = None
-SemanticModelCollector = None
-RealTimeIntelligenceCollector = None
-MirroringCollector = None
-MLAICollector = None
+# Collectors not yet implemented — stub classes give a clear error at instantiation
+# rather than a confusing TypeError at attribute access.
+class _NotImplementedCollector:
+    """Base for unimplemented collector stubs."""
+    _name: str = "Collector"
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError(
+            f"{self.__class__.__name__} is not yet implemented. "
+            "Track progress at https://github.com/Keayoub/FabricLA-Connector/issues"
+        )
+
+
+class OneLakeStorageCollector(_NotImplementedCollector):
+    _name = "OneLakeStorageCollector"
+
+class SparkJobCollector(_NotImplementedCollector):
+    _name = "SparkJobCollector"
+
+class NotebookCollector(_NotImplementedCollector):
+    _name = "NotebookCollector"
+
+class GitIntegrationCollector(_NotImplementedCollector):
+    _name = "GitIntegrationCollector"
+
+class DataLineageCollector(_NotImplementedCollector):
+    _name = "DataLineageCollector"
+
+class SemanticModelCollector(_NotImplementedCollector):
+    _name = "SemanticModelCollector"
+
+class RealTimeIntelligenceCollector(_NotImplementedCollector):
+    _name = "RealTimeIntelligenceCollector"
+
+class MirroringCollector(_NotImplementedCollector):
+    _name = "MirroringCollector"
+
+class MLAICollector(_NotImplementedCollector):
+    _name = "MLAICollector"
 
 # Legacy mapper functions - use new mappers from mappers/ subpackage instead
 # These are exported for backward compatibility

@@ -5,6 +5,12 @@
 
 .DS_Store
 
+# Security cleanup helpers (local use only)
+cleanup_secrets.bat
+commit_and_clean.py
+replacements.txt
+.secrets.baseline
+
 # User-specific files
 *.rsuser
 *.suo
@@ -421,7 +427,7 @@ infra/fabric-api-endpoints-summary.md
 
 infra/terraform/.terraform.lock.hcl
 infra/terraform/terraform.tfstate
-# infra/terraform/terraform.tfvars
+infra/terraform/terraform.tfvars
 infra/terraform/.terraform.tfstate.lock.info
 infra/terraform/terraform.tfstate.backup
 infra/terraform/terraform.tfvars.backup

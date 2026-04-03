@@ -30,7 +30,7 @@ def get_fabric_environment_info() -> Dict[str, Any]:
                 "is_fabric": True,
                 "notebook_utils_available": True
             }
-        except:
+        except Exception:
             pass
         
         return workspace_info
@@ -215,7 +215,7 @@ def print_config_status():
     print(f"\nFound Configuration Summary:")
     for key, value in config.items():
         if 'secret' in key.lower() or 'password' in key.lower():
-            display_value = f"{'*' * len(value) if value else 'Not Set'}"
+            display_value = '***REDACTED***' if value else 'Not Set'
         else:
             display_value = value or "Not Set"
         print(f"   {key}: {display_value}")

@@ -19,17 +19,18 @@
           "columns": [
             { "name": "TimeGenerated", "type": "datetime" },
             { "name": "WorkspaceId", "type": "string" },
+            { "name": "PipelineId", "type": "string" },
+            { "name": "PipelineName", "type": "string" },
             { "name": "ItemId", "type": "string" },
-            { "name": "ItemType", "type": "string" },
             { "name": "RunId", "type": "string" },
             { "name": "JobType", "type": "string" },
             { "name": "InvokeType", "type": "string" },
             { "name": "Status", "type": "string" },
-            { "name": "StartTimeUtc", "type": "datetime" },
-            { "name": "EndTimeUtc", "type": "datetime" },
+            { "name": "StartTime", "type": "datetime" },
+            { "name": "EndTime", "type": "datetime" },
             { "name": "DurationMs", "type": "long" },
-            { "name": "FailureCode", "type": "string" },
-            { "name": "FailureMessage", "type": "string" }
+            { "name": "RootActivityId", "type": "string" },
+            { "name": "FailureReason", "type": "string" }
           ]
         }
       }
@@ -46,6 +47,7 @@
           "columns": [
             { "name": "TimeGenerated", "type": "datetime" },
             { "name": "WorkspaceId", "type": "string" },
+            { "name": "PipelineId", "type": "string" },
             { "name": "PipelineName", "type": "string" },
             { "name": "ActivityName", "type": "string" },
             { "name": "ActivityType", "type": "string" },
@@ -77,12 +79,17 @@
             { "name": "TimeGenerated", "type": "datetime" },
             { "name": "WorkspaceId", "type": "string" },
             { "name": "DataflowId", "type": "string" },
+            { "name": "DataflowName", "type": "string" },
             { "name": "RunId", "type": "string" },
+            { "name": "ItemId", "type": "string" },
             { "name": "Status", "type": "string" },
-            { "name": "StartTimeUtc", "type": "datetime" },
-            { "name": "EndTimeUtc", "type": "datetime" },
+            { "name": "StartTime", "type": "datetime" },
+            { "name": "EndTime", "type": "datetime" },
             { "name": "DurationMs", "type": "long" },
-            { "name": "ErrorMessage", "type": "string" }
+            { "name": "InvokeType", "type": "string" },
+            { "name": "JobType", "type": "string" },
+            { "name": "RootActivityId", "type": "string" },
+            { "name": "FailureReason", "type": "string" }
           ]
         }
       }
@@ -98,15 +105,26 @@
           "name": "FabricUserActivity_CL",
           "columns": [
             { "name": "TimeGenerated", "type": "datetime" },
-            { "name": "UserId", "type": "string" },
-            { "name": "UserEmail", "type": "string" },
-            { "name": "Activity", "type": "string" },
             { "name": "WorkspaceId", "type": "string" },
-            { "name": "ItemId", "type": "string" },
+            { "name": "ActivityId", "type": "string" },
+            { "name": "UserId", "type": "string" },
+            { "name": "UserKey", "type": "string" },
+            { "name": "Activity", "type": "string" },
+            { "name": "Operation", "type": "string" },
+            { "name": "IsSuccess", "type": "boolean" },
+            { "name": "RequestId", "type": "string" },
+            { "name": "Workload", "type": "string" },
+            { "name": "ClientIP", "type": "string" },
+            { "name": "OrganizationId", "type": "string" },
+            { "name": "CreationTime", "type": "datetime" },
             { "name": "ItemName", "type": "string" },
+            { "name": "WorkspaceName", "type": "string" },
             { "name": "ItemType", "type": "string" },
-            { "name": "OperationName", "type": "string" },
-            { "name": "ActivityId", "type": "string" }
+            { "name": "ObjectId", "type": "string" },
+            { "name": "ArtifactId", "type": "string" },
+            { "name": "ArtifactName", "type": "string" },
+            { "name": "CapacityId", "type": "string" },
+            { "name": "CapacityName", "type": "string" }
           ]
         }
       }
@@ -126,15 +144,14 @@
             { "name": "DatasetId", "type": "string" },
             { "name": "DatasetName", "type": "string" },
             { "name": "RefreshId", "type": "string" },
-            { "name": "RefreshType", "type": "string" },
             { "name": "Status", "type": "string" },
             { "name": "StartTime", "type": "datetime" },
             { "name": "EndTime", "type": "datetime" },
             { "name": "DurationMs", "type": "long" },
-            { "name": "ServicePrincipalId", "type": "string" },
-            { "name": "ErrorCode", "type": "string" },
-            { "name": "ErrorMessage", "type": "string" },
-            { "name": "RequestId", "type": "string" }
+            { "name": "InvokeType", "type": "string" },
+            { "name": "JobType", "type": "string" },
+            { "name": "RootActivityId", "type": "string" },
+            { "name": "FailureReason", "type": "string" }
           ]
         }
       }
@@ -154,14 +171,11 @@
             { "name": "DatasetId", "type": "string" },
             { "name": "DatasetName", "type": "string" },
             { "name": "Description", "type": "string" },
-            { "name": "ConfiguredBy", "type": "string" },
+            { "name": "Type", "type": "string" },
             { "name": "CreatedDate", "type": "datetime" },
             { "name": "ModifiedDate", "type": "datetime" },
-            { "name": "ContentProviderType", "type": "string" },
-            { "name": "DatasourceType", "type": "string" },
-            { "name": "IsOnPremGatewayRequired", "type": "boolean" },
-            { "name": "IsRefreshable", "type": "boolean" },
-            { "name": "AddRowsAPIEnabled", "type": "boolean" }
+            { "name": "CreatedBy", "type": "string" },
+            { "name": "ModifiedBy", "type": "string" }
           ]
         }
       }

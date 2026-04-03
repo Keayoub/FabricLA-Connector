@@ -24,9 +24,9 @@ class TestConfig:
     """Test configuration loaded from environment variables."""
     
     # Fabric configuration
-    WORKSPACE_ID = os.getenv("FABRIC_WORKSPACE_ID", "REDACTED-WORKSPACE-ID-2")
-    ENVIRONMENT_ID = os.getenv("FABRIC_ENVIRONMENT_ID", "REDACTED-ENV-ID")
-    CAPACITY_ID = os.getenv("FABRIC_CAPACITY_ID", "test-capacity-id")
+    WORKSPACE_ID = os.getenv("FABRIC_WORKSPACE_ID", "00000000-0000-0000-0000-000000000001")
+    ENVIRONMENT_ID = os.getenv("FABRIC_ENVIRONMENT_ID", "00000000-0000-0000-0000-000000000002")
+    CAPACITY_ID = os.getenv("FABRIC_CAPACITY_ID", "00000000-0000-0000-0000-000000000003")
     
     # Test item IDs
     PIPELINE_ID = os.getenv("TEST_PIPELINE_ID", "test-pipeline-id")

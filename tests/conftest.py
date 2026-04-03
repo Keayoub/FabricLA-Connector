@@ -25,13 +25,16 @@ except ImportError:
     # For environments where pytest is not installed
     pytest = None
 
-# Test configuration constants from environment
-TEST_WORKSPACE_ID = os.getenv("FABRIC_WORKSPACE_ID", "REDACTED-WORKSPACE-ID-2")
-TEST_ENVIRONMENT_ID = os.getenv("FABRIC_ENVIRONMENT_ID", "REDACTED-ENV-ID")
-TEST_CAPACITY_ID = os.getenv("FABRIC_CAPACITY_ID", "test-capacity-id")
-TEST_PIPELINE_ID = os.getenv("TEST_PIPELINE_ID", "test-pipeline-id")
-TEST_DATAFLOW_ID = os.getenv("TEST_DATAFLOW_ID", "test-dataflow-id")
-TEST_DATASET_ID = os.getenv("TEST_DATASET_ID", "test-dataset-id")
+# Test configuration constants from environment.
+# When USE_MOCK_API=true (default), these are dummy values used only to satisfy
+# constructor validation. When USE_MOCK_API=false (real connections), set them
+# in tests/.env or the test run will fail at the API level.
+TEST_WORKSPACE_ID = os.getenv("FABRIC_WORKSPACE_ID", "00000000-0000-0000-0000-000000000001")
+TEST_ENVIRONMENT_ID = os.getenv("FABRIC_ENVIRONMENT_ID", "00000000-0000-0000-0000-000000000002")
+TEST_CAPACITY_ID = os.getenv("FABRIC_CAPACITY_ID", "00000000-0000-0000-0000-000000000003")
+TEST_PIPELINE_ID = os.getenv("TEST_PIPELINE_ID", "00000000-0000-0000-0000-000000000004")
+TEST_DATAFLOW_ID = os.getenv("TEST_DATAFLOW_ID", "00000000-0000-0000-0000-000000000005")
+TEST_DATASET_ID = os.getenv("TEST_DATASET_ID", "00000000-0000-0000-0000-000000000006")
 
 # Azure Monitor configuration from environment
 AZURE_MONITOR_DCE_ENDPOINT = os.getenv("AZURE_MONITOR_DCE_ENDPOINT", "https://test-dce.eastus-1.ingest.monitor.azure.com")
