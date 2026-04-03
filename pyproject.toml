@@ -44,7 +44,7 @@ dependencies = [
     "azure-mgmt-core>=1.6.0",
     "python-dotenv>=1.1.1",
     # Use numpy <2 to remain compatible with common scientific stacks on shared runtimes
-    "numpy>=1.22.4,<2.0.0",
+    "numpy>=1.22.4,<3.0.0",
     # pandas 2.2.x works with numpy <2; keep a narrow range to avoid pulling numpy 2.x
     "pandas>=2.2.0,<2.3.0",
     # Ensure filelock and PyJWT match other installed tool expectations
