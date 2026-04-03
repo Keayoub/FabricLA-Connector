@@ -31,27 +31,23 @@ classifiers = [
 ]
 keywords = ["microsoft", "fabric", "monitoring", "azure", "log-analytics", "data-collection"]
 dependencies = [
+    # Fabric API authentication
     "msal>=1.34.0",
-    "requests>=2.32.5",
-    "azure-core>=1.31.0",
+    "requests>=2.33.0",
+    # Azure identity + core (used by ingestion client and auth)
     "azure-identity>=1.16.1",
-    "azure-keyvault-secrets>=4.8.0",
-    "azure-storage-blob>=12.22.0",
-    "azure-storage-file-datalake>=12.16.0",
-    "azure-datalake-store>=0.0.53",
+    "azure-core>=1.38.0",
+    # Azure Monitor ingestion (LogsIngestionClient — required for DCE/DCR upload)
+    "azure-monitor-ingestion>=1.0.0",
+    # Azure management (used by monitoring detection)
     "azure-mgmt-monitor>=7.0.0,<8.0.0",
-    "azure-common>=1.1.28",
     "azure-mgmt-core>=1.6.0",
+    "azure-common>=1.1.28",
+    # Environment variable management
     "python-dotenv>=1.1.1",
-    # Use numpy <2 to remain compatible with common scientific stacks on shared runtimes
-    "numpy>=1.22.4,<2.0.0",
-    # pandas 2.2.x works with numpy <2; keep a narrow range to avoid pulling numpy 2.x
-    "pandas>=2.2.0,<2.3.0",
-    # Ensure filelock and PyJWT match other installed tool expectations
-    "filelock<3.12,>=3.8.0",
-    "PyJWT>=2.6.0,<3.0.0",
-    # Constrain fsspec to versions compatible with datasets 2.19.x
-    "fsspec<=2024.3.1,>=2023.1.0"
+    # Secure transitive dep floor (CVE fixes)
+    "cryptography>=46.0.6",
+    "urllib3>=2.6.3",
 ]
 
 [project.urls]
@@ -72,7 +68,8 @@ dev = [
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
     "pip-audit>=2.7.3",
-    "bandit[toml]>=1.7.9"
+    "bandit[toml]>=1.7.9",
+    "uv>=0.5.0"
 ]
 test = [
     "pytest>=7.0.0",

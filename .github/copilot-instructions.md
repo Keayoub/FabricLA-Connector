@@ -196,6 +196,16 @@ See `.env.example` for the full list. Key groups:
 | Auth method | `AUTH_METHOD` (AzureCLI / ManagedIdentity / ServicePrincipal) |
 | Logging | `LOG_LEVEL` (INFO), `DEBUG_MODE` (false), `LOG_FILE_PATH` |
 
+## Security Conventions
+
+- **Never log token fragments.** `auth.py` must not emit any part of a bearer token at any log level.
+- **All `subprocess` calls use `shell=False`.** Pass argument lists, never shell strings.
+- **GUID inputs are validated at collector instantiation.** `BaseCollector.__init__` calls `validate_workspace_id()` from `utils.py`; `CapacityUtilizationCollector` validates `capacity_id` separately. Raise `ValueError` on invalid format.
+- **Bare `except:` is banned.** Always catch a specific exception type (e.g., `except Exception as e:`).
+- **Collector stubs in `collectors/__init__.py`** that are not yet implemented must be `_NotImplementedCollector` subclasses that raise `NotImplementedError`, not `None` assignments.
+- **Pre-commit hooks** (`.pre-commit-config.yaml`): `nbstripout` (strips notebook outputs before commit), `detect-secrets`, `detect-private-key`, `flake8`. Install once with `pre-commit install`.
+- **`terraform.tfvars` is gitignored** and must never be committed — it contains real infrastructure IDs.
+
 ## Deployment
 
 ```bash
@@ -219,6 +229,23 @@ The CI pipeline (`.github/workflows/fabric-deployment.yml`) builds on every push
 - Updates version in `pyproject.toml`, `__init__.py`, `README.md`
 - Commits with `"Bump version to X.Y.Z"`, creates git tag `vX.Y.Z`
 - Use `-Push` flag to push and `-Build` to validate build
+
+## Fabric Item Creation Tools
+
+`tools/` includes scripts to create Fabric items via REST API. All support the same three auth methods and a `--dry-run` flag:
+
+```bash
+# Create a data pipeline
+python tools/create_fabric_pipeline.py --workspace-id <WS_ID> --pipeline-file tools/samples/sample_pipeline.json --use-default-credential
+
+# Create a warehouse (DW100c=small, DW200c=medium, DW400c=large)
+python tools/create_fabric_warehouse.py --workspace-id <WS_ID> --size medium --use-default-credential
+
+# Create a Dataflow Gen2
+python tools/create_fabric_dataflow_gen2.py --workspace-id <WS_ID> --mashup-file tools/samples/sample_mashup.pq --name "My ETL" --use-default-credential
+```
+
+Auth precedence for all tools: `--token` → `--client-id/--client-secret/--tenant-id` → `--use-default-credential`.
 
 ## Fabric-Compatible Local Environments
 
