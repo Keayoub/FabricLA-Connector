@@ -10,17 +10,17 @@ azure-common==1.1.28 \
     # via
     #   -r requirements.in
     #   azure-mgmt-monitor
-azure-core==1.35.1 \
-    --hash=sha256:12da0c9e08e48e198f9158b56ddbe33b421477e1dc98c2e1c8f9e254d92c468b \
-    --hash=sha256:435d05d6df0fff2f73fb3c15493bb4721ede14203f1ff1382aa6b6b2bdd7e562
+azure-core==1.39.0 \
+    --hash=sha256:4ac7b70fab5438c3f68770649a78daf97833caa83827f91df9c14e0e0ea7d34f \
+    --hash=sha256:8a90a562998dd44ce84597590fff6249701b98c0e8797c95fcdd695b54c35d74
     # via
     #   -r requirements.in
     #   azure-identity
     #   azure-keyvault-secrets
     #   azure-mgmt-core
-azure-identity==1.25.0 \
-    --hash=sha256:4177df34d684cddc026e6cf684e1abb57767aa9d84e7f2129b080ec45eee7733 \
-    --hash=sha256:becaec086bbdf8d1a6aa4fb080c2772a0f824a97d50c29637ec8cc4933f1e82d
+azure-identity==1.25.3 \
+    --hash=sha256:ab23c0d63015f50b630ef6c6cf395e7262f439ce06e5d07a64e874c724f8d9e6 \
+    --hash=sha256:f4d0b956a8146f30333e071374171f3cfa7bdb8073adb8c3814b65567aa7447c
     # via -r requirements.in
 azure-keyvault-secrets==4.10.0 \
     --hash=sha256:666fa42892f9cee749563e551a90f060435ab878977c95265173a8246d546a36 \
@@ -276,9 +276,9 @@ isodate==0.7.2 \
     # via
     #   azure-keyvault-secrets
     #   azure-mgmt-monitor
-msal==1.34.0 \
-    --hash=sha256:76ba83b716ea5a6d75b0279c0ac353a0e05b820ca1f6682c0eb7f45190c43c2f \
-    --hash=sha256:f669b1644e4950115da7a176441b0e13ec2975c29528d8b9e81316023676d6e1
+msal==1.35.1 \
+    --hash=sha256:70cac18ab80a053bff86219ba64cfe3da1f307c74b009e2da57ef040eb1b5656 \
+    --hash=sha256:8f4e82f34b10c19e326ec69f44dc6b30171f2f7098f3720ea8a9f0c11832caa3
     # via
     #   -r requirements.in
     #   azure-identity
@@ -454,9 +454,7 @@ requests==2.32.5 \
 six==1.17.0 \
     --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274 \
     --hash=sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81
-    # via
-    #   azure-core
-    #   python-dateutil
+    # via python-dateutil
 typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
     --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
