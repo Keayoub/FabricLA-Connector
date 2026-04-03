@@ -32,6 +32,25 @@ repos:
         args: [--maxkb=1000]
       - id: detect-private-key
 
+  # Python dependency vulnerability scanning (checks against PyPI advisory DB)
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.7.3
+    hooks:
+      - id: pip-audit
+        args:
+          - --requirement
+          - requirements.txt
+          - --strict
+        pass_filenames: false
+
+  # Python security linting (OWASP-aligned static analysis)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml, -ll]
+        files: ^src/
+
   # Python linting
   - repo: https://github.com/PyCQA/flake8
     rev: 7.1.0

@@ -9,7 +9,6 @@
 cleanup_secrets.bat
 commit_and_clean.py
 replacements.txt
-.secrets.baseline
 
 # User-specific files
 *.rsuser
@@ -450,5 +449,3 @@ tmp_deps/
 build/
 dist/
 *.egg-info/
-
-

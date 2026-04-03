@@ -70,7 +70,9 @@ dev = [
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",
-    "pre-commit>=3.0.0"
+    "pre-commit>=3.0.0",
+    "pip-audit>=2.7.3",
+    "bandit[toml]>=1.7.9"
 ]
 test = [
     "pytest>=7.0.0",
@@ -141,4 +143,13 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "notebooks", "docs", "scripts", "setup", "tools"]
+skips = [
+    "B101",  # Use of assert detected — fine in tests
+    "B105",  # Hardcoded password string — covered by detect-secrets
+    "B106",  # Hardcoded password funcarg — covered by detect-secrets
+    "B107",  # Hardcoded password default — covered by detect-secrets
 ]
