@@ -46,7 +46,7 @@ dependencies = [
     # Use numpy <2 to remain compatible with common scientific stacks on shared runtimes
     "numpy>=1.22.4,<2.0.0",
     # pandas 2.2.x works with numpy <2; keep a narrow range to avoid pulling numpy 2.x
-    "pandas>=2.2.0,<2.3.0",
+    "pandas>=2.2.0,<3.1.0",
     # Ensure filelock and PyJWT match other installed tool expectations
     "filelock<3.12,>=3.8.0",
     "PyJWT>=2.6.0,<3.0.0",
