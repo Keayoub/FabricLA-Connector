@@ -4,7 +4,7 @@ This folder contains scripts for setting up Python environments compatible with 
 
 ## Scripts Overview
 
-### `setup_fabric_environment.py` 
+### `setup_fabric_environment.py`
 **Primary Python Setup Script**
 - Interactive Python script for creating Fabric runtime environments
 - Downloads official requirements from Microsoft Synapse Spark Runtime repository
@@ -32,10 +32,9 @@ setup_fabric_environment.bat
 
 ### `download_fabric_requirements.py`
 **Requirements Downloader**
-- Downloads the latest official requirements from Microsoft Synapse Spark Runtime repository
-- Parses YAML files and converts them to pip-compatible requirements.txt format
-- Filters packages relevant to Azure and Log Analytics integration
-- Creates version-specific requirements files
+- Downloads the latest official Fabric runtime YAML files from Microsoft Synapse Spark Runtime
+- Extracts the official pip package list from the selected runtime
+- Writes version-specific requirements files directly from the upstream package list
 
 **Usage:**
 ```bash
@@ -66,7 +65,7 @@ fabric-la-connector/
 │   ├── cleanup_environments.bat
 │   └── README.md
 ├── .fabric-env-1.2/                # Python 3.10 environment (if created)
-├── .fabric-env-1.3/                # Python 3.11 environment (if created)  
+├── .fabric-env-1.3/                # Python 3.11 environment (if created)
 ├── .env.example                    # Environment variables template
 ├── requirements-fabric-1.2.txt     # Fabric 1.2 requirements (if generated)
 ├── requirements-fabric-1.3.txt     # Fabric 1.3 requirements (if generated)
@@ -87,7 +86,7 @@ fabric-la-connector/
    ```bash
    # Windows
    .fabric-env-1.3\Scripts\activate.bat
-   
+
    # Unix/Linux/macOS
    source .fabric-env-1.3/bin/activate
    ```
@@ -136,6 +135,7 @@ All requirements are downloaded from the official Microsoft repository:
 - **Repository**: https://github.com/microsoft/synapse-spark-runtime
 - **Fabric Runtime 1.2**: `Fabric/Runtime 1.2 (Spark 3.4)/Fabric-Python310-CPU.yml`
 - **Fabric Runtime 1.3**: `Fabric/Runtime 1.3 (Spark 3.5)/Fabric-Python311-CPU.yml`
+- The generated requirements files now mirror the upstream `pip:` section for each runtime
 
 ## VS Code Integration
 
