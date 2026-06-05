@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Lint, Test & Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Lint (flake8)
+        run: flake8 src/
+
+      - name: Type check (mypy)
+        run: mypy src/ --ignore-missing-imports --no-error-summary
+
+      - name: Run unit tests
+        env:
+          USE_MOCK_API: "true"
+        run: |
+          pytest -m "not integration and not slow" \
+            --tb=short -q \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-fail-under=50
+
+      - name: Security audit (uv audit)
+        run: uv audit
+
+      - name: Check no notebook outputs committed
+        run: |
+          python - <<'EOF'
+          import json, sys, pathlib
+          failures = []
+          for nb_path in pathlib.Path("notebooks").rglob("*.ipynb"):
+              nb = json.loads(nb_path.read_text(encoding="utf-8"))
+              for cell in nb.get("cells", []):
+                  if cell.get("outputs"):
+                      failures.append(str(nb_path))
+                      break
+          if failures:
+              print("ERROR: These notebooks have committed cell outputs:")
+              for f in failures:
+                  print(f"  {f}")
+              print("Fix: nbstripout <file>")
+              sys.exit(1)
+          print(f"OK: {len(list(pathlib.Path('notebooks').rglob('*.ipynb')))} notebooks are output-free.")
+          EOF

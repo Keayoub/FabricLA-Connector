@@ -4,6 +4,7 @@ This module provides intelligent workflows for comprehensive monitoring.
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional
 from azure.identity import DefaultAzureCredential
 # Import collectors from collectors subpackage
@@ -17,25 +18,48 @@ from .collectors import (
     NotebookCollector,
     GitIntegrationCollector,
 )
-from .ingestion import post_rows_to_dcr, AzureMonitorIngestionClient
+from .ingestion import post_rows_to_dcr, AzureMonitorIngestionClient  # noqa: F401
+from .config import get_config, get_ingestion_config, validate_config, get_monitoring_config
+from .api import get_fabric_token
+from .monitoring_detection import (
+    get_monitoring_detector,
+    get_monitoring_strategy,
+    print_monitoring_status
+)
 
 # Alias kept for backward compatibility
 post_rows_to_dcr_enhanced = post_rows_to_dcr
 
-from .config import get_config, get_ingestion_config, get_fabric_config, validate_config, get_monitoring_config
-from .api import get_fabric_token
-
-# Import enhanced functions from consolidated utils
-from .utils import within_lookback_minutes
-
-# Import intelligent monitoring components
-from .monitoring_detection import (
-    get_monitoring_detector, 
-    get_monitoring_strategy, 
-    print_monitoring_status
-)
-
 logger = logging.getLogger(__name__)
+
+_DEFAULT_MAX_WORKERS = 4
+
+
+def _run_parallel(
+    tasks: List[tuple],
+    max_workers: int = _DEFAULT_MAX_WORKERS,
+) -> Dict[str, Any]:
+    """
+    Execute a list of (name, callable) pairs concurrently.
+
+    Returns a dict mapping each name to either the callable's return value
+    or an error dict ``{"error": str(e)}`` if the callable raised.
+
+    Args:
+        tasks: List of (task_name, callable) pairs. Callables take no args.
+        max_workers: Thread-pool size.
+    """
+    results: Dict[str, Any] = {}
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(tasks))) as executor:
+        future_to_name = {executor.submit(fn): name for name, fn in tasks}
+        for future in as_completed(future_to_name):
+            name = future_to_name[future]
+            try:
+                results[name] = future.result()
+            except Exception as exc:
+                logger.error("Parallel task %s failed: %s", name, exc)
+                results[name] = {"status": "error", "error": str(exc)}
+    return results
 
 
 def collect_and_ingest_pipeline_data(
@@ -363,7 +387,7 @@ def collect_and_ingest_pipeline_data_enhanced(
     """
     try:
         # Import enhanced functions
-        from .utils import within_lookback_minutes, iso_now, chunk_records_by_size
+        from .utils import within_lookback_minutes, iso_now, chunk_records_by_size  # noqa: F401
 
         print(
             f"STARTING: Starting enhanced pipeline data collection for workspace {workspace_id}"
@@ -377,10 +401,9 @@ def collect_and_ingest_pipeline_data_enhanced(
             config.update(custom_config)
 
         ingestion_config = get_ingestion_config()
-        fabric_config = get_fabric_config()
 
         # Get authentication token
-        token = get_fabric_token()
+        get_fabric_token()
 
         # Initialize collector
         collector = PipelineDataCollector(workspace_id, lookback_hours)
@@ -393,7 +416,7 @@ def collect_and_ingest_pipeline_data_enhanced(
             # Note: Current collector doesn't support filtering by specific IDs
             # Collecting all and would need to filter post-collection
             print(
-                f"   Note: Collecting all pipelines (filtering by specific IDs not yet implemented)"
+                "   Note: Collecting all pipelines (filtering by specific IDs not yet implemented)"
             )
 
         # Collect pipeline runs
@@ -454,14 +477,8 @@ def collect_and_ingest_pipeline_data_enhanced(
         # Add troubleshooting report if enabled
         if enable_troubleshooting:
             try:
-                report = create_troubleshooting_report_legacy(
-                    workspace_id=workspace_id,
-                    pipeline_rows=pipeline_runs,
-                    activity_rows=activity_runs,
-                    ingestion_summary=ingestion_summary,
-                )
-                result["troubleshooting_report"] = report
-                print("\n" + report)
+                logger.warning("Troubleshooting report not available in this version")
+                result["troubleshooting_note"] = "Troubleshooting report not available in this version"
             except ImportError:
                 result["troubleshooting_note"] = (
                     "Enhanced troubleshooting features not available"
@@ -469,7 +486,7 @@ def collect_and_ingest_pipeline_data_enhanced(
             except Exception as e:
                 result["troubleshooting_error"] = f"Failed to generate report: {e}"
 
-        print(f"SUCCESS: Enhanced pipeline collection completed successfully")
+        print("SUCCESS: Enhanced pipeline collection completed successfully")
         return result
 
     except Exception as e:
@@ -482,11 +499,8 @@ def collect_and_ingest_pipeline_data_enhanced(
         }
 
         if enable_troubleshooting:
-            report = create_troubleshooting_report_legacy(
-                workspace_id=workspace_id, ingestion_summary={"error": str(e)}
-            )
-            error_result["troubleshooting_report"] = report
-            print("\n" + report)
+            logger.warning("Troubleshooting report not available in this version")
+            error_result["troubleshooting_note"] = "Troubleshooting report not available in this version"
 
         print(f"ERROR: Enhanced pipeline collection failed: {e}")
         return error_result
@@ -507,22 +521,22 @@ def validate_and_test_configuration() -> Dict[str, Any]:
     print(f"Valid: {'SUCCESS:' if validation['valid'] else 'ERROR:'}")
 
     if validation["missing_required"]:
-        print(f"\nERROR: Missing Required:")
+        print("\nERROR: Missing Required:")
         for item in validation["missing_required"]:
             print(f"   - {item}")
 
     if validation["missing_optional"]:
-        print(f"\nWARNING:  Missing Optional:")
+        print("\nWARNING:  Missing Optional:")
         for item in validation["missing_optional"]:
             print(f"   - {item}")
 
     # Test authentication
     auth_test = {"success": False, "error": None}
     try:
-        print(f"\nSECURE: Testing Authentication...")
+        print("\nSECURE: Testing Authentication...")
         token = get_fabric_token()
         if token:
-            print(f"   SUCCESS: Token acquired successfully")
+            print("   SUCCESS: Token acquired successfully")
             auth_test["success"] = True
         else:
             auth_test["error"] = "No token returned"
@@ -569,7 +583,7 @@ def run_full_monitoring_cycle_enhanced(
     print("STARTING: Starting full monitoring cycle...")
     print("=" * 60)
 
-    results = {
+    results: Dict[str, Any] = {
         "pipeline_data": None,
         "dataset_refreshes": None,
         "capacity_utilization": None,
@@ -579,76 +593,28 @@ def run_full_monitoring_cycle_enhanced(
         "total_ingested": 0,
     }
 
-    # 1. Pipeline and Dataflow Data
-    print("\n1️⃣ Collecting Pipeline & Dataflow Data")
-    try:
-        pipeline_result = collect_and_ingest_pipeline_data(
-            workspace_id, lookback_hours, custom_config
-        )
-        results["pipeline_data"] = pipeline_result
-        results["total_collected"] += pipeline_result.get("collected_count", 0)
-        if "ingestion_result" in pipeline_result:
-            results["total_ingested"] += pipeline_result["ingestion_result"].get(
-                "ingested_count", 0
-            )
-    except Exception as e:
-        results["pipeline_data"] = {"status": "error", "message": str(e)}
-        results["overall_status"] = "partial"
-
-    # 2. Dataset Refresh Data
-    print("\n2️⃣ Collecting Dataset Refresh Data")
-    try:
-        dataset_result = collect_and_ingest_dataset_refreshes(
-            workspace_id, lookback_hours, custom_config
-        )
-        results["dataset_refreshes"] = dataset_result
-        results["total_collected"] += dataset_result.get("collected_count", 0)
-        if "ingestion_result" in dataset_result:
-            results["total_ingested"] += dataset_result["ingestion_result"].get(
-                "ingested_count", 0
-            )
-    except Exception as e:
-        results["dataset_refreshes"] = {"status": "error", "message": str(e)}
-        results["overall_status"] = "partial"
-
-    # 3. Capacity Utilization (if capacity_id provided)
+    # Build parallel tasks — all sources are independent
+    tasks = [
+        ("pipeline_data", lambda: collect_and_ingest_pipeline_data(workspace_id, lookback_hours, custom_config)),
+        ("dataset_refreshes", lambda: collect_and_ingest_dataset_refreshes(workspace_id, lookback_hours, custom_config)),
+        ("user_activity", lambda: collect_and_ingest_user_activity(workspace_id, lookback_hours, custom_config)),
+    ]
     if capacity_id:
-        print("\n3️⃣ Collecting Capacity Utilization Data")
-        try:
-            capacity_result = collect_and_ingest_capacity_utilization(
-                capacity_id, lookback_hours, custom_config
-            )
-            results["capacity_utilization"] = capacity_result
-            results["total_collected"] += capacity_result.get("collected_count", 0)
-            if "ingestion_result" in capacity_result:
-                results["total_ingested"] += capacity_result["ingestion_result"].get(
-                    "ingested_count", 0
-                )
-        except Exception as e:
-            results["capacity_utilization"] = {"status": "error", "message": str(e)}
-            results["overall_status"] = "partial"
+        tasks.append(("capacity_utilization", lambda: collect_and_ingest_capacity_utilization(capacity_id, lookback_hours, custom_config)))
     else:
-        print("\n3️⃣ Skipping Capacity Utilization (no capacity_id provided)")
-        results["capacity_utilization"] = {
-            "status": "skipped",
-            "message": "No capacity_id provided",
-        }
+        results["capacity_utilization"] = {"status": "skipped", "message": "No capacity_id provided"}
 
-    # 4. User Activity Data
-    print("\n4️⃣ Collecting User Activity Data")
-    try:
-        activity_result = collect_and_ingest_user_activity(
-            workspace_id, lookback_hours, custom_config
-        )
-        results["user_activity"] = activity_result
-        results["total_collected"] += activity_result.get("collected_count", 0)
-        if "ingestion_result" in activity_result:
-            results["total_ingested"] += activity_result["ingestion_result"].get(
-                "ingested_count", 0
-            )
-    except Exception as e:
-        results["user_activity"] = {"status": "error", "message": str(e)}
-        results["overall_status"] = "partial"
+    print(f"\n⚡ Running {len(tasks)} collectors in parallel...")
+    parallel_results = _run_parallel(tasks)
+
+    # Merge results
+    for key, result in parallel_results.items():
+        results[key] = result
+        if result.get("status") == "error":
+            results["overall_status"] = "partial"
+        results["total_collected"] += result.get("collected_count", 0)
+        if "ingestion_result" in result:
+            results["total_ingested"] += result["ingestion_result"].get("ingested_count", 0)
 
     # Summary
     print("\n" + "=" * 60)
@@ -993,7 +959,7 @@ def run_operational_monitoring_cycle(
     print("STARTING: Starting operational monitoring cycle...")
     print("=" * 60)
 
-    results = {
+    results: Dict[str, Any] = {
         "onelake_storage": None,
         "spark_jobs": None,
         "notebooks": None,
@@ -1003,53 +969,23 @@ def run_operational_monitoring_cycle(
         "total_ingested": 0,
     }
 
-    # 1. OneLake Storage Data
-    print("\nDATABASE:️ Collecting OneLake Storage Data")
-    try:
-        onelake_result = collect_and_ingest_onelake_storage(workspace_id, custom_config)
-        results["onelake_storage"] = onelake_result
-        results["total_collected"] += onelake_result.get("collected_count", 0)
-        if "ingestion_result" in onelake_result:
-            results["total_ingested"] += onelake_result["ingestion_result"].get("ingested_count", 0)
-    except Exception as e:
-        results["onelake_storage"] = {"status": "error", "message": str(e)}
-        results["overall_status"] = "partial"
+    tasks = [
+        ("onelake_storage", lambda: collect_and_ingest_onelake_storage(workspace_id, custom_config)),
+        ("spark_jobs", lambda: collect_and_ingest_spark_jobs(workspace_id, lookback_hours, custom_config)),
+        ("notebooks", lambda: collect_and_ingest_notebooks(workspace_id, lookback_hours, custom_config)),
+        ("git_integration", lambda: collect_and_ingest_git_integration(workspace_id, custom_config)),
+    ]
 
-    # 2. Spark Jobs Data
-    print("\nFAST: Collecting Spark Jobs Data")
-    try:
-        spark_result = collect_and_ingest_spark_jobs(workspace_id, lookback_hours, custom_config)
-        results["spark_jobs"] = spark_result
-        results["total_collected"] += spark_result.get("collected_count", 0)
-        if "ingestion_result" in spark_result:
-            results["total_ingested"] += spark_result["ingestion_result"].get("ingested_count", 0)
-    except Exception as e:
-        results["spark_jobs"] = {"status": "error", "message": str(e)}
-        results["overall_status"] = "partial"
+    print(f"\n⚡ Running {len(tasks)} operational collectors in parallel...")
+    parallel_results = _run_parallel(tasks)
 
-    # 3. Notebooks Data
-    print("\nNOTEBOOK: Collecting Notebooks Data")
-    try:
-        notebook_result = collect_and_ingest_notebooks(workspace_id, lookback_hours, custom_config)
-        results["notebooks"] = notebook_result
-        results["total_collected"] += notebook_result.get("collected_count", 0)
-        if "ingestion_result" in notebook_result:
-            results["total_ingested"] += notebook_result["ingestion_result"].get("ingested_count", 0)
-    except Exception as e:
-        results["notebooks"] = {"status": "error", "message": str(e)}
-        results["overall_status"] = "partial"
-
-    # 4. Git Integration Data
-    print("\nLINK: Collecting Git Integration Data")
-    try:
-        git_result = collect_and_ingest_git_integration(workspace_id, custom_config)
-        results["git_integration"] = git_result
-        results["total_collected"] += git_result.get("collected_count", 0)
-        if "ingestion_result" in git_result:
-            results["total_ingested"] += git_result["ingestion_result"].get("ingested_count", 0)
-    except Exception as e:
-        results["git_integration"] = {"status": "error", "message": str(e)}
-        results["overall_status"] = "partial"
+    for key, result in parallel_results.items():
+        results[key] = result
+        if result.get("status") == "error":
+            results["overall_status"] = "partial"
+        results["total_collected"] += result.get("collected_count", 0)
+        if "ingestion_result" in result:
+            results["total_ingested"] += result["ingestion_result"].get("ingested_count", 0)
 
     # Summary
     print("\n" + "=" * 60)
@@ -1093,50 +1029,49 @@ def main_activity_workflow(workspace_id: str, lookback_hours: int = 24):
 # INTELLIGENT WORKFLOW FUNCTIONS
 # ======================================
 
-def run_intelligent_monitoring_cycle(workspace_id: str, capacity_id: Optional[str] = None, 
-                                   strategy_override: Optional[str] = None) -> Dict[str, Any]:
+def run_intelligent_monitoring_cycle(workspace_id: str, capacity_id: Optional[str] = None,
+                                     strategy_override: Optional[str] = None) -> Dict[str, Any]:
     """
     Run an intelligent monitoring cycle that adapts to workspace monitoring status.
-    
+
     This is the main entry point for smart monitoring that:
     1. Detects Microsoft's workspace monitoring status
     2. Applies intelligent collection strategy
     3. Collects only data that provides unique value
     4. Avoids conflicts with Microsoft's official monitoring
-    
+
     Args:
         workspace_id: Fabric workspace ID to monitor
         capacity_id: Optional capacity ID for capacity monitoring
         strategy_override: Optional strategy override ('auto', 'full', 'complement', 'minimal')
-        
+
     Returns:
         Dict with collection results and monitoring insights
     """
-    
+
     logger.info(f"Starting intelligent monitoring cycle for workspace {workspace_id}")
-    
+
     try:
         # Get configuration
-        fabric_config = get_fabric_config()
         monitoring_config = get_monitoring_config()
-        
+
         # Override strategy if provided
         if strategy_override:
             monitoring_config['strategy'] = strategy_override
-        
+
         # Get authentication token
         token = get_fabric_token()
-        
+
         # Initialize monitoring components
         detector = get_monitoring_detector(token)
         strategy = get_monitoring_strategy(monitoring_config['strategy'])
-        
+
         # Detect workspace monitoring status
         monitoring_status = detector.detect_workspace_monitoring_status(workspace_id)
-        
+
         # Print comprehensive status report
         print_monitoring_status(monitoring_status, strategy)
-        
+
         # Initialize results
         results = {
             "workspace_id": workspace_id,
@@ -1151,7 +1086,7 @@ def run_intelligent_monitoring_cycle(workspace_id: str, capacity_id: Optional[st
                 "total_records": 0
             }
         }
-        
+
         # Define data sources to evaluate
         data_sources = [
             ("pipeline_execution", lambda: _collect_pipeline_data(workspace_id, monitoring_config)),
@@ -1164,77 +1099,75 @@ def run_intelligent_monitoring_cycle(workspace_id: str, capacity_id: Optional[st
             ("notebooks", lambda: _collect_notebooks_data(workspace_id, monitoring_config)),
             ("git_integration", lambda: _collect_git_integration_data(workspace_id, monitoring_config))
         ]
-        
-        # Process each data source intelligently
+
+        # Separate sources into collect vs skip based on strategy decisions
+        parallel_tasks = []
+        decisions: Dict[str, Any] = {}
         for source_name, collector_func in data_sources:
-            if collector_func is None:  # Skip if no capacity_id provided
+            if collector_func is None:  # no capacity_id
                 continue
-                
+
             results["summary"]["total_sources"] += 1
-            
-            # Get collection decision
             decision = strategy.should_collect_data_source(source_name, monitoring_status)
-            
+            decisions[source_name] = decision
+
             if decision["collect"]:
-                try:
-                    logger.info(f"Collecting {source_name}: {decision['reason']}")
-                    collection_result = collector_func()
-                    
-                    if collection_result and collection_result.get("status") == "success":
-                        results["collections"][source_name] = {
-                            "result": collection_result,
-                            "decision": decision,
-                            "records_collected": collection_result.get("total_records", 0)
-                        }
-                        results["summary"]["collected_sources"] += 1
-                        results["summary"]["total_records"] += collection_result.get("total_records", 0)
-                        
-                        print(f"SUCCESS: {source_name}: {collection_result.get('total_records', 0)} records")
-                    else:
-                        logger.warning(f"Collection failed for {source_name}: {collection_result}")
-                        results["collections"][source_name] = {
-                            "result": collection_result,
-                            "decision": decision,
-                            "error": True
-                        }
-                        
-                except Exception as e:
-                    logger.error(f"Error collecting {source_name}: {e}")
-                    results["collections"][source_name] = {
-                        "error": str(e),
-                        "decision": decision
-                    }
+                logger.info("Queuing %s for parallel collection: %s", source_name, decision["reason"])
+                parallel_tasks.append((source_name, collector_func))
             else:
-                # Record skipped collection with reason
                 results["skipped_collections"][source_name] = decision
                 results["summary"]["skipped_sources"] += 1
-                
                 reason = decision.get("reason", "unknown")
                 alternative = decision.get("alternative")
                 print(f"NEXT:  {source_name}: Skipped - {reason}")
                 if alternative:
                     print(f"   TIP: Alternative: {alternative}")
-        
+
+        # Run all approved sources in parallel
+        if parallel_tasks:
+            print(f"\n⚡ Running {len(parallel_tasks)} collectors in parallel...")
+            parallel_results = _run_parallel(parallel_tasks)
+
+            for source_name, collection_result in parallel_results.items():
+                decision = decisions[source_name]
+                if collection_result and collection_result.get("status") == "success":
+                    results["collections"][source_name] = {
+                        "result": collection_result,
+                        "decision": decision,
+                        "records_collected": collection_result.get("total_records", 0)
+                    }
+                    results["summary"]["collected_sources"] += 1
+                    results["summary"]["total_records"] += collection_result.get("total_records", 0)
+                    print(f"SUCCESS: {source_name}: {collection_result.get('total_records', 0)} records")
+                else:
+                    error_msg = collection_result.get("error") if isinstance(collection_result, dict) else str(collection_result)
+                    logger.warning("Collection failed for %s: %s", source_name, error_msg)
+                    results["collections"][source_name] = {
+                        "result": collection_result,
+                        "decision": decision,
+                        "error": True
+                    }
+
         # Generate final summary
         collected = results["summary"]["collected_sources"]
         total = results["summary"]["total_sources"]
         records = results["summary"]["total_records"]
-        
-        print(f"\nTARGET: Intelligent Monitoring Summary:")
+
+        print("\nTARGET: Intelligent Monitoring Summary:")
         print(f"   Found Data Sources: {collected}/{total} collected")
         print(f"   NOTE: Total Records: {records:,}")
         print(f"   AI: Strategy: {monitoring_config['strategy']}")
-        
+
         # Add recommendations for skipped sources
         if results["skipped_collections"]:
-            print(f"\nTIP: Recommendations for skipped sources:")
+            print("\nTIP: Recommendations for skipped sources:")
             for source, decision in results["skipped_collections"].items():
                 if decision.get("alternative"):
                     print(f"   • {source}: {decision['alternative']}")
-        
+
         results["status"] = "success"
         return results
-        
+
     except Exception as e:
         logger.error(f"Error in intelligent monitoring cycle: {e}")
         return {
@@ -1247,7 +1180,7 @@ def run_intelligent_monitoring_cycle(workspace_id: str, capacity_id: Optional[st
 def check_workspace_monitoring_status(workspace_id: str) -> Dict[str, Any]:
     """
     Check workspace monitoring status without running collection.
-    
+
     Useful for understanding monitoring setup before running collection.
     """
     try:
@@ -1265,11 +1198,11 @@ def check_workspace_monitoring_status(workspace_id: str) -> Dict[str, Any]:
 def get_collection_recommendations(workspace_id: str, strategy: str = "auto") -> Dict[str, Any]:
     """
     Get collection recommendations for a workspace without running collection.
-    
+
     Args:
         workspace_id: Fabric workspace ID
         strategy: Monitoring strategy ('auto', 'full', 'complement', 'minimal')
-        
+
     Returns:
         Dict with recommendations for each data source
     """
@@ -1277,26 +1210,26 @@ def get_collection_recommendations(workspace_id: str, strategy: str = "auto") ->
         token = get_fabric_token()
         detector = get_monitoring_detector(token)
         strategy_obj = get_monitoring_strategy(strategy)
-        
+
         monitoring_status = detector.detect_workspace_monitoring_status(workspace_id)
-        
+
         recommendations = {}
         data_sources = [
-            "pipeline_execution", "dataflow_execution", "user_activity", 
+            "pipeline_execution", "dataflow_execution", "user_activity",
             "dataset_refresh", "capacity_utilization", "onelake_storage",
             "spark_jobs", "notebooks", "git_integration"
         ]
-        
+
         for source in data_sources:
             recommendations[source] = strategy_obj.should_collect_data_source(source, monitoring_status)
-        
+
         return {
             "workspace_id": workspace_id,
             "strategy": strategy,
             "monitoring_status": monitoring_status,
             "recommendations": recommendations
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting collection recommendations: {e}")
         return {"error": str(e)}
@@ -1404,7 +1337,7 @@ def _collect_git_integration_data(workspace_id: str, monitoring_config: Dict[str
 def run_full_monitoring_cycle_intelligent(workspace_id: str, capacity_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Enhanced version of run_full_monitoring_cycle with intelligence.
-    
+
     This replaces the original run_full_monitoring_cycle with smart detection.
     """
     return run_intelligent_monitoring_cycle(workspace_id, capacity_id, strategy_override="auto")
@@ -1435,24 +1368,24 @@ def collect_and_ingest_access_permissions(
 ) -> Dict[str, Any]:
     """
     Collect and ingest access permissions data for security compliance monitoring.
-    
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import AccessPermissionsCollector
     from .ingestion import post_rows_to_dcr
     from .config import get_ingestion_config
-    
+
     results = {
         "workspace_permissions": {"collected": 0, "ingested": 0},
         "item_permissions": {"collected": 0, "ingested": 0},
         "capacity_permissions": {"collected": 0, "ingested": 0},
         "errors": []
     }
-    
+
     try:
         collector = AccessPermissionsCollector(workspace_id)
-        
+
         # Get ingestion configuration
         ingestion_config = get_ingestion_config()
         if dce_endpoint:
@@ -1463,11 +1396,11 @@ def collect_and_ingest_access_permissions(
             ingestion_config["stream_name"] = stream_name
         else:
             ingestion_config["stream_name"] = "Custom-FabricPermissions_CL"
-        
+
         # Collect workspace permissions
         workspace_permissions = list(collector.collect_workspace_permissions())
         results["workspace_permissions"]["collected"] = len(workspace_permissions)
-        
+
         if workspace_permissions:
             ingest_result = post_rows_to_dcr(
                 records=workspace_permissions,
@@ -1476,11 +1409,11 @@ def collect_and_ingest_access_permissions(
                 stream_name=ingestion_config["stream_name"]
             )
             results["workspace_permissions"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
+
         # Collect item permissions
         item_permissions = list(collector.collect_item_permissions())
         results["item_permissions"]["collected"] = len(item_permissions)
-        
+
         if item_permissions:
             ingest_result = post_rows_to_dcr(
                 records=item_permissions,
@@ -1489,12 +1422,12 @@ def collect_and_ingest_access_permissions(
                 stream_name=ingestion_config["stream_name"]
             )
             results["item_permissions"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
+
         # Collect capacity permissions if capacity_id provided
         if capacity_id:
             capacity_permissions = list(collector.collect_capacity_permissions(capacity_id))
             results["capacity_permissions"]["collected"] = len(capacity_permissions)
-            
+
             if capacity_permissions:
                 ingest_result = post_rows_to_dcr(
                     records=capacity_permissions,
@@ -1503,17 +1436,17 @@ def collect_and_ingest_access_permissions(
                     stream_name=ingestion_config["stream_name"]
                 )
                 results["capacity_permissions"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
-        print(f"SUCCESS: Access permissions collection completed:")
+
+        print("SUCCESS: Access permissions collection completed:")
         print(f"   Workspace permissions: {results['workspace_permissions']['collected']} collected, {results['workspace_permissions']['ingested']} ingested")
         print(f"   Item permissions: {results['item_permissions']['collected']} collected, {results['item_permissions']['ingested']} ingested")
         print(f"   Capacity permissions: {results['capacity_permissions']['collected']} collected, {results['capacity_permissions']['ingested']} ingested")
-        
+
     except Exception as e:
         error_msg = f"Error in access permissions collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return results
 
 
@@ -1525,30 +1458,30 @@ def collect_and_ingest_workspace_config(
 ) -> Dict[str, Any]:
     """
     Collect and ingest workspace configuration including OAP (OneLake Access Point) settings.
-    
+
     Args:
         workspace_id: Fabric workspace ID
         dce_endpoint: Optional custom DCE endpoint
         dcr_immutable_id: Optional custom DCR immutable ID
         stream_name: Optional custom stream name
-        
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import AccessPermissionsCollector
     from .ingestion import post_rows_to_dcr
     from .config import get_ingestion_config
-    
+
     results = {
         "workspace_config": {"collected": 0, "ingested": 0},
         "errors": []
     }
-    
+
     try:
         print(f"STARTING: Starting workspace configuration collection for workspace {workspace_id}")
-        
+
         collector = AccessPermissionsCollector(workspace_id)
-        
+
         # Get ingestion configuration
         ingestion_config = get_ingestion_config()
         if dce_endpoint:
@@ -1559,11 +1492,11 @@ def collect_and_ingest_workspace_config(
             ingestion_config["stream_name"] = stream_name
         else:
             ingestion_config["stream_name"] = "Custom-FabricWorkspaceConfig_CL"
-        
+
         # Collect workspace configuration
         workspace_config = list(collector.collect_workspace_config())
         results["workspace_config"]["collected"] = len(workspace_config)
-        
+
         if workspace_config:
             ingest_result = post_rows_to_dcr(
                 records=workspace_config,
@@ -1572,15 +1505,15 @@ def collect_and_ingest_workspace_config(
                 stream_name=ingestion_config["stream_name"]
             )
             results["workspace_config"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
-        print(f"SUCCESS: Workspace configuration collection completed:")
+
+        print("SUCCESS: Workspace configuration collection completed:")
         print(f"   Workspace config: {results['workspace_config']['collected']} collected, {results['workspace_config']['ingested']} ingested")
-        
+
     except Exception as e:
         error_msg = f"Error in workspace config collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return results
 
 
@@ -1592,23 +1525,23 @@ def collect_and_ingest_data_lineage(
 ) -> Dict[str, Any]:
     """
     Collect and ingest data lineage information for regulatory compliance tracking.
-    
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import DataLineageCollector
     from .ingestion import post_rows_to_dcr
     from .config import get_ingestion_config
-    
+
     results = {
         "dataset_lineage": {"collected": 0, "ingested": 0},
         "dataflow_lineage": {"collected": 0, "ingested": 0},
         "errors": []
     }
-    
+
     try:
         collector = DataLineageCollector(workspace_id)
-        
+
         # Get ingestion configuration
         ingestion_config = get_ingestion_config()
         if dce_endpoint:
@@ -1619,11 +1552,11 @@ def collect_and_ingest_data_lineage(
             ingestion_config["stream_name"] = stream_name
         else:
             ingestion_config["stream_name"] = "Custom-FabricDataLineage_CL"
-        
+
         # Collect dataset lineage
         dataset_lineage = list(collector.collect_dataset_lineage())
         results["dataset_lineage"]["collected"] = len(dataset_lineage)
-        
+
         if dataset_lineage:
             ingest_result = post_rows_to_dcr(
                 records=dataset_lineage,
@@ -1632,11 +1565,11 @@ def collect_and_ingest_data_lineage(
                 stream_name=ingestion_config["stream_name"]
             )
             results["dataset_lineage"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
+
         # Collect dataflow lineage
         dataflow_lineage = list(collector.collect_dataflow_lineage())
         results["dataflow_lineage"]["collected"] = len(dataflow_lineage)
-        
+
         if dataflow_lineage:
             ingest_result = post_rows_to_dcr(
                 records=dataflow_lineage,
@@ -1645,16 +1578,16 @@ def collect_and_ingest_data_lineage(
                 stream_name=ingestion_config["stream_name"]
             )
             results["dataflow_lineage"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
-        print(f"SUCCESS: Data lineage collection completed:")
+
+        print("SUCCESS: Data lineage collection completed:")
         print(f"   Dataset lineage: {results['dataset_lineage']['collected']} collected, {results['dataset_lineage']['ingested']} ingested")
         print(f"   Dataflow lineage: {results['dataflow_lineage']['collected']} collected, {results['dataflow_lineage']['ingested']} ingested")
-        
+
     except Exception as e:
         error_msg = f"Error in data lineage collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return results
 
 
@@ -1666,23 +1599,23 @@ def collect_and_ingest_semantic_models(
 ) -> Dict[str, Any]:
     """
     Collect and ingest semantic model performance data for BI optimization.
-    
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import SemanticModelCollector
     from .ingestion import post_rows_to_dcr
     from .config import get_ingestion_config
-    
+
     results = {
         "refresh_performance": {"collected": 0, "ingested": 0},
         "usage_patterns": {"collected": 0, "ingested": 0},
         "errors": []
     }
-    
+
     try:
         collector = SemanticModelCollector(workspace_id)
-        
+
         # Get ingestion configuration
         ingestion_config = get_ingestion_config()
         if dce_endpoint:
@@ -1693,11 +1626,11 @@ def collect_and_ingest_semantic_models(
             ingestion_config["stream_name"] = stream_name
         else:
             ingestion_config["stream_name"] = "Custom-FabricSemanticModels_CL"
-        
+
         # Collect refresh performance
         refresh_performance = list(collector.collect_model_refresh_performance())
         results["refresh_performance"]["collected"] = len(refresh_performance)
-        
+
         if refresh_performance:
             ingest_result = post_rows_to_dcr(
                 records=refresh_performance,
@@ -1706,11 +1639,11 @@ def collect_and_ingest_semantic_models(
                 stream_name=ingestion_config["stream_name"]
             )
             results["refresh_performance"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
+
         # Collect usage patterns
         usage_patterns = list(collector.collect_model_usage_patterns())
         results["usage_patterns"]["collected"] = len(usage_patterns)
-        
+
         if usage_patterns:
             ingest_result = post_rows_to_dcr(
                 records=usage_patterns,
@@ -1719,16 +1652,16 @@ def collect_and_ingest_semantic_models(
                 stream_name=ingestion_config["stream_name"]
             )
             results["usage_patterns"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
-        print(f"SUCCESS: Semantic model collection completed:")
+
+        print("SUCCESS: Semantic model collection completed:")
         print(f"   Refresh performance: {results['refresh_performance']['collected']} collected, {results['refresh_performance']['ingested']} ingested")
         print(f"   Usage patterns: {results['usage_patterns']['collected']} collected, {results['usage_patterns']['ingested']} ingested")
-        
+
     except Exception as e:
         error_msg = f"Error in semantic model collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return results
 
 
@@ -1742,23 +1675,23 @@ def collect_and_ingest_real_time_intelligence(
 ) -> Dict[str, Any]:
     """
     Collect and ingest Real-Time Intelligence data for streaming analytics monitoring.
-    
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import RealTimeIntelligenceCollector
     from .ingestion import post_rows_to_dcr
     from .config import get_ingestion_config
-    
+
     results = {
         "eventstream_metrics": {"collected": 0, "ingested": 0},
         "kql_database_performance": {"collected": 0, "ingested": 0},
         "errors": []
     }
-    
+
     try:
         collector = RealTimeIntelligenceCollector(workspace_id)
-        
+
         # Get ingestion configuration
         ingestion_config = get_ingestion_config()
         if dce_endpoint:
@@ -1769,11 +1702,11 @@ def collect_and_ingest_real_time_intelligence(
             ingestion_config["stream_name"] = stream_name
         else:
             ingestion_config["stream_name"] = "Custom-FabricRealTimeIntelligence_CL"
-        
+
         # Collect Eventstream metrics
         eventstream_metrics = list(collector.collect_eventstream_metrics())
         results["eventstream_metrics"]["collected"] = len(eventstream_metrics)
-        
+
         if eventstream_metrics:
             ingest_result = post_rows_to_dcr(
                 records=eventstream_metrics,
@@ -1782,11 +1715,11 @@ def collect_and_ingest_real_time_intelligence(
                 stream_name=ingestion_config["stream_name"]
             )
             results["eventstream_metrics"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
+
         # Collect KQL Database performance
         kql_performance = list(collector.collect_kql_database_performance())
         results["kql_database_performance"]["collected"] = len(kql_performance)
-        
+
         if kql_performance:
             ingest_result = post_rows_to_dcr(
                 records=kql_performance,
@@ -1795,16 +1728,16 @@ def collect_and_ingest_real_time_intelligence(
                 stream_name=ingestion_config["stream_name"]
             )
             results["kql_database_performance"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
-        print(f"SUCCESS: Real-Time Intelligence collection completed:")
+
+        print("SUCCESS: Real-Time Intelligence collection completed:")
         print(f"   Eventstream metrics: {results['eventstream_metrics']['collected']} collected, {results['eventstream_metrics']['ingested']} ingested")
         print(f"   KQL database performance: {results['kql_database_performance']['collected']} collected, {results['kql_database_performance']['ingested']} ingested")
-        
+
     except Exception as e:
         error_msg = f"Error in Real-Time Intelligence collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return results
 
 
@@ -1816,22 +1749,22 @@ def collect_and_ingest_mirroring(
 ) -> Dict[str, Any]:
     """
     Collect and ingest Mirroring data for hybrid data monitoring.
-    
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import MirroringCollector
     from .ingestion import post_rows_to_dcr
     from .config import get_ingestion_config
-    
+
     results = {
         "mirror_status": {"collected": 0, "ingested": 0},
         "errors": []
     }
-    
+
     try:
         collector = MirroringCollector(workspace_id)
-        
+
         # Get ingestion configuration
         ingestion_config = get_ingestion_config()
         if dce_endpoint:
@@ -1842,11 +1775,11 @@ def collect_and_ingest_mirroring(
             ingestion_config["stream_name"] = stream_name
         else:
             ingestion_config["stream_name"] = "Custom-FabricMirroring_CL"
-        
+
         # Collect Mirror status
         mirror_status = list(collector.collect_mirror_status())
         results["mirror_status"]["collected"] = len(mirror_status)
-        
+
         if mirror_status:
             ingest_result = post_rows_to_dcr(
                 records=mirror_status,
@@ -1855,15 +1788,15 @@ def collect_and_ingest_mirroring(
                 stream_name=ingestion_config["stream_name"]
             )
             results["mirror_status"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
-        print(f"SUCCESS: Mirroring collection completed:")
+
+        print("SUCCESS: Mirroring collection completed:")
         print(f"   Mirror status: {results['mirror_status']['collected']} collected, {results['mirror_status']['ingested']} ingested")
-        
+
     except Exception as e:
         error_msg = f"Error in Mirroring collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return results
 
 
@@ -1875,23 +1808,23 @@ def collect_and_ingest_ml_ai(
 ) -> Dict[str, Any]:
     """
     Collect and ingest ML/AI data for AI workload governance.
-    
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import MLAICollector
     from .ingestion import post_rows_to_dcr
     from .config import get_ingestion_config
-    
+
     results = {
         "ml_models": {"collected": 0, "ingested": 0},
         "ml_experiments": {"collected": 0, "ingested": 0},
         "errors": []
     }
-    
+
     try:
         collector = MLAICollector(workspace_id)
-        
+
         # Get ingestion configuration
         ingestion_config = get_ingestion_config()
         if dce_endpoint:
@@ -1902,11 +1835,11 @@ def collect_and_ingest_ml_ai(
             ingestion_config["stream_name"] = stream_name
         else:
             ingestion_config["stream_name"] = "Custom-FabricMLAI_CL"
-        
+
         # Collect ML Models
         ml_models = list(collector.collect_ml_models())
         results["ml_models"]["collected"] = len(ml_models)
-        
+
         if ml_models:
             ingest_result = post_rows_to_dcr(
                 records=ml_models,
@@ -1915,11 +1848,11 @@ def collect_and_ingest_ml_ai(
                 stream_name=ingestion_config["stream_name"]
             )
             results["ml_models"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
+
         # Collect ML Experiments
         ml_experiments = list(collector.collect_ml_experiments())
         results["ml_experiments"]["collected"] = len(ml_experiments)
-        
+
         if ml_experiments:
             ingest_result = post_rows_to_dcr(
                 records=ml_experiments,
@@ -1928,16 +1861,16 @@ def collect_and_ingest_ml_ai(
                 stream_name=ingestion_config["stream_name"]
             )
             results["ml_experiments"]["ingested"] = ingest_result.get("uploaded_row_count", 0)
-        
-        print(f"SUCCESS: ML/AI collection completed:")
+
+        print("SUCCESS: ML/AI collection completed:")
         print(f"   ML models: {results['ml_models']['collected']} collected, {results['ml_models']['ingested']} ingested")
         print(f"   ML experiments: {results['ml_experiments']['collected']} collected, {results['ml_experiments']['ingested']} ingested")
-        
+
     except Exception as e:
         error_msg = f"Error in ML/AI collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return results
 
 
@@ -1949,12 +1882,12 @@ def run_compliance_monitoring_cycle(
 ) -> Dict[str, Any]:
     """
     Run Phase 2 compliance monitoring cycle for security and governance.
-    
+
     Returns:
         Dict with overall results from all Phase 2 collections
     """
     print(f"SECURE: Starting compliance monitoring cycle for workspace: {workspace_id}")
-    
+
     overall_results = {
         "access_permissions": {},
         "data_lineage": {},
@@ -1963,7 +1896,7 @@ def run_compliance_monitoring_cycle(
         "total_ingested": 0,
         "errors": []
     }
-    
+
     try:
         # Access & Permissions
         print("\nINFO: Collecting access permissions...")
@@ -1971,21 +1904,21 @@ def run_compliance_monitoring_cycle(
             workspace_id, capacity_id, dce_endpoint, dcr_immutable_id, "Custom-FabricPermissions_CL"
         )
         overall_results["access_permissions"] = permissions_results
-        
+
         # Data Lineage
         print("\nLINK: Collecting data lineage...")
         lineage_results = collect_and_ingest_data_lineage(
             workspace_id, dce_endpoint, dcr_immutable_id, "Custom-FabricDataLineage_CL"
         )
         overall_results["data_lineage"] = lineage_results
-        
+
         # Semantic Models
         print("\nFound Collecting semantic model performance...")
         models_results = collect_and_ingest_semantic_models(
             workspace_id, dce_endpoint, dcr_immutable_id, "Custom-FabricSemanticModels_CL"
         )
         overall_results["semantic_models"] = models_results
-        
+
         # Calculate totals
         for category in [permissions_results, lineage_results, models_results]:
             overall_results["errors"].extend(category.get("errors", []))
@@ -1993,17 +1926,17 @@ def run_compliance_monitoring_cycle(
                 if isinstance(category[collection_type], dict) and "collected" in category[collection_type]:
                     overall_results["total_collected"] += category[collection_type]["collected"]
                     overall_results["total_ingested"] += category[collection_type]["ingested"]
-        
-        print(f"\nSUCCESS: Compliance monitoring cycle completed:")
+
+        print("\nSUCCESS: Compliance monitoring cycle completed:")
         print(f"   Total collected: {overall_results['total_collected']}")
         print(f"   Total ingested: {overall_results['total_ingested']}")
         print(f"   Errors: {len(overall_results['errors'])}")
-        
+
     except Exception as e:
         error_msg = f"Error in compliance monitoring cycle: {str(e)}"
         overall_results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return overall_results
 
 
@@ -2014,12 +1947,12 @@ def run_advanced_workloads_monitoring_cycle(
 ) -> Dict[str, Any]:
     """
     Run Phase 3 advanced workloads monitoring cycle.
-    
+
     Returns:
         Dict with overall results from all Phase 3 collections
     """
     print(f"STARTING: Starting advanced workloads monitoring cycle for workspace: {workspace_id}")
-    
+
     overall_results = {
         "real_time_intelligence": {},
         "mirroring": {},
@@ -2028,7 +1961,7 @@ def run_advanced_workloads_monitoring_cycle(
         "total_ingested": 0,
         "errors": []
     }
-    
+
     try:
         # Real-Time Intelligence
         print("\nFAST: Collecting Real-Time Intelligence metrics...")
@@ -2036,21 +1969,21 @@ def run_advanced_workloads_monitoring_cycle(
             workspace_id, dce_endpoint, dcr_immutable_id, "Custom-FabricRealTimeIntelligence_CL"
         )
         overall_results["real_time_intelligence"] = rti_results
-        
+
         # Mirroring
         print("\n🪞 Collecting Mirroring status...")
         mirroring_results = collect_and_ingest_mirroring(
             workspace_id, dce_endpoint, dcr_immutable_id, "Custom-FabricMirroring_CL"
         )
         overall_results["mirroring"] = mirroring_results
-        
+
         # ML/AI
         print("\nAGENT: Collecting ML/AI workloads...")
         mlai_results = collect_and_ingest_ml_ai(
             workspace_id, dce_endpoint, dcr_immutable_id, "Custom-FabricMLAI_CL"
         )
         overall_results["ml_ai"] = mlai_results
-        
+
         # Calculate totals
         for category in [rti_results, mirroring_results, mlai_results]:
             overall_results["errors"].extend(category.get("errors", []))
@@ -2058,17 +1991,17 @@ def run_advanced_workloads_monitoring_cycle(
                 if isinstance(category[collection_type], dict) and "collected" in category[collection_type]:
                     overall_results["total_collected"] += category[collection_type]["collected"]
                     overall_results["total_ingested"] += category[collection_type]["ingested"]
-        
-        print(f"\nSUCCESS: Advanced workloads monitoring cycle completed:")
+
+        print("\nSUCCESS: Advanced workloads monitoring cycle completed:")
         print(f"   Total collected: {overall_results['total_collected']}")
         print(f"   Total ingested: {overall_results['total_ingested']}")
         print(f"   Errors: {len(overall_results['errors'])}")
-        
+
     except Exception as e:
         error_msg = f"Error in advanced workloads monitoring cycle: {str(e)}"
         overall_results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return overall_results
 
 
@@ -2080,12 +2013,12 @@ def run_comprehensive_monitoring_cycle(
 ) -> Dict[str, Any]:
     """
     Run comprehensive monitoring cycle including all phases (1, 2, and 3).
-    
+
     Returns:
         Dict with overall results from all monitoring phases
     """
     print(f"TARGET: Starting comprehensive monitoring cycle for workspace: {workspace_id}")
-    
+
     overall_results = {
         "phase1_operational": {},
         "phase2_compliance": {},
@@ -2094,7 +2027,7 @@ def run_comprehensive_monitoring_cycle(
         "total_ingested": 0,
         "errors": []
     }
-    
+
     try:
         # Phase 1: Operational Monitoring
         print("\nFound Phase 1: Operational monitoring...")
@@ -2103,41 +2036,41 @@ def run_comprehensive_monitoring_cycle(
             phase1_config["dce_endpoint"] = dce_endpoint
         if dcr_immutable_id:
             phase1_config["dcr_immutable_id"] = dcr_immutable_id
-        
+
         phase1_results = run_operational_monitoring_cycle(
-            workspace_id=workspace_id, 
-            capacity_id=capacity_id, 
+            workspace_id=workspace_id,
+            capacity_id=capacity_id,
             lookback_hours=24,
             custom_config=phase1_config if phase1_config else None
         )
         overall_results["phase1_operational"] = phase1_results
-        
+
         # Phase 2: Compliance Monitoring
         print("\nSECURE: Phase 2: Compliance monitoring...")
         phase2_results = run_compliance_monitoring_cycle(workspace_id, capacity_id, dce_endpoint, dcr_immutable_id)
         overall_results["phase2_compliance"] = phase2_results
-        
+
         # Phase 3: Advanced Workloads
         print("\nSTARTING: Phase 3: Advanced workloads monitoring...")
         phase3_results = run_advanced_workloads_monitoring_cycle(workspace_id, dce_endpoint, dcr_immutable_id)
         overall_results["phase3_advanced"] = phase3_results
-        
+
         # Calculate totals
         for phase in [phase1_results, phase2_results, phase3_results]:
             overall_results["errors"].extend(phase.get("errors", []))
             overall_results["total_collected"] += phase.get("total_collected", 0)
             overall_results["total_ingested"] += phase.get("total_ingested", 0)
-        
-        print(f"\nCOMPLETE: Comprehensive monitoring cycle completed:")
+
+        print("\nCOMPLETE: Comprehensive monitoring cycle completed:")
         print(f"   Total collected: {overall_results['total_collected']}")
         print(f"   Total ingested: {overall_results['total_ingested']}")
         print(f"   Errors: {len(overall_results['errors'])}")
-        
+
     except Exception as e:
         error_msg = f"Error in comprehensive monitoring cycle: {str(e)}"
         overall_results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-    
+
     return overall_results
 
 
@@ -2153,20 +2086,20 @@ def collect_and_ingest_spark_applications(
 ) -> Dict[str, Any]:
     """
     Collect Spark applications from workspace and ingest to Log Analytics.
-    
+
     Args:
         workspace_id: Fabric workspace ID
         lookback_hours: Hours to look back for applications
         custom_config: Optional custom configuration
         max_items: Maximum items to collect
-        
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import collect_spark_applications_workspace
-    
+
     print(f"STARTING: Starting Spark applications collection for workspace {workspace_id}")
-    
+
     results = {
         "collected": 0,
         "ingested": 0,
@@ -2174,24 +2107,23 @@ def collect_and_ingest_spark_applications(
         "workspace_id": workspace_id,
         "collection_type": "spark_applications"
     }
-    
+
     try:
         # Get configuration
-        config = custom_config or get_config()
         ingestion_config = get_ingestion_config()
-        
+
         # Collect Spark applications
         applications = []
         for app in collect_spark_applications_workspace(workspace_id, lookback_hours, max_items):
             applications.append(app)
             results["collected"] += 1
-            
+
         if not applications:
             print("WARNING: No Spark applications collected")
             return results
-            
+
         print(f"PACKAGE: Collected {len(applications)} Spark applications")
-        
+
         # Ingest to Log Analytics
         if ingestion_config.get("enabled", True):
             ingestion_result = post_rows_to_dcr_enhanced(
@@ -2201,20 +2133,20 @@ def collect_and_ingest_spark_applications(
                 ingestion_config["stream_name"],
                 ingestion_config["table_name"]
             )
-            
+
             results["ingested"] = ingestion_result.get("ingested_count", 0)
             if ingestion_result.get("errors"):
                 results["errors"].extend(ingestion_result["errors"])
-                
-        print(f"SUCCESS: Spark applications workflow completed")
+
+        print("SUCCESS: Spark applications workflow completed")
         print(f"   Collected: {results['collected']}")
         print(f"   Ingested: {results['ingested']}")
-        
+
     except Exception as e:
         error_msg = f"Error in Spark applications collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-        
+
     return results
 
 
@@ -2228,7 +2160,7 @@ def collect_and_ingest_spark_item_applications(
 ) -> Dict[str, Any]:
     """
     Collect Spark applications for specific item and ingest to Log Analytics.
-    
+
     Args:
         workspace_id: Fabric workspace ID
         item_id: Item ID (notebook, Spark job definition, etc.)
@@ -2236,14 +2168,14 @@ def collect_and_ingest_spark_item_applications(
         lookback_hours: Hours to look back for applications
         custom_config: Optional custom configuration
         max_items: Maximum items to collect
-        
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import collect_spark_applications_item
-    
+
     print(f"STARTING: Starting Spark applications collection for {item_type} {item_id}")
-    
+
     results = {
         "collected": 0,
         "ingested": 0,
@@ -2253,24 +2185,23 @@ def collect_and_ingest_spark_item_applications(
         "item_type": item_type,
         "collection_type": "spark_item_applications"
     }
-    
+
     try:
         # Get configuration
-        config = custom_config or get_config()
         ingestion_config = get_ingestion_config()
-        
+
         # Collect Spark applications
         applications = []
         for app in collect_spark_applications_item(workspace_id, item_id, item_type, lookback_hours, max_items):
             applications.append(app)
             results["collected"] += 1
-            
+
         if not applications:
             print(f"WARNING: No Spark applications collected for {item_type} {item_id}")
             return results
-            
+
         print(f"PACKAGE: Collected {len(applications)} Spark applications for {item_type}")
-        
+
         # Ingest to Log Analytics
         if ingestion_config.get("enabled", True):
             ingestion_result = post_rows_to_dcr_enhanced(
@@ -2280,20 +2211,20 @@ def collect_and_ingest_spark_item_applications(
                 ingestion_config["stream_name"],
                 ingestion_config["table_name"]
             )
-            
+
             results["ingested"] = ingestion_result.get("ingested_count", 0)
             if ingestion_result.get("errors"):
                 results["errors"].extend(ingestion_result["errors"])
-                
-        print(f"SUCCESS: Spark item applications workflow completed")
+
+        print("SUCCESS: Spark item applications workflow completed")
         print(f"   Collected: {results['collected']}")
         print(f"   Ingested: {results['ingested']}")
-        
+
     except Exception as e:
         error_msg = f"Error in Spark item applications collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-        
+
     return results
 
 
@@ -2306,21 +2237,21 @@ def collect_and_ingest_spark_logs(
 ) -> Dict[str, Any]:
     """
     Collect Spark logs for a session and ingest to Log Analytics.
-    
+
     Args:
         workspace_id: Fabric workspace ID
         session_id: Spark session ID
         log_types: Types of logs to collect
         custom_config: Optional custom configuration
         max_lines: Maximum log lines per type
-        
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import collect_spark_logs
-    
+
     print(f"STARTING: Starting Spark logs collection for session {session_id}")
-    
+
     results = {
         "collected": 0,
         "ingested": 0,
@@ -2329,12 +2260,11 @@ def collect_and_ingest_spark_logs(
         "session_id": session_id,
         "collection_type": "spark_logs"
     }
-    
+
     try:
         # Get configuration
-        config = custom_config or get_config()
         ingestion_config = get_ingestion_config()
-        
+
         # Collect logs for each type
         all_logs = []
         for log_type in log_types:
@@ -2342,14 +2272,14 @@ def collect_and_ingest_spark_logs(
             for log_entry in collect_spark_logs(workspace_id, session_id, log_type, max_lines):
                 logs.append(log_entry)
                 results["collected"] += 1
-                
+
             all_logs.extend(logs)
             print(f"PACKAGE: Collected {len(logs)} {log_type} log entries")
-            
+
         if not all_logs:
             print("WARNING: No Spark logs collected")
             return results
-            
+
         # Ingest to Log Analytics
         if ingestion_config.get("enabled", True):
             ingestion_result = post_rows_to_dcr_enhanced(
@@ -2359,20 +2289,20 @@ def collect_and_ingest_spark_logs(
                 ingestion_config["stream_name"],
                 ingestion_config["table_name"]
             )
-            
+
             results["ingested"] = ingestion_result.get("ingested_count", 0)
             if ingestion_result.get("errors"):
                 results["errors"].extend(ingestion_result["errors"])
-                
-        print(f"SUCCESS: Spark logs workflow completed")
+
+        print("SUCCESS: Spark logs workflow completed")
         print(f"   Collected: {results['collected']}")
         print(f"   Ingested: {results['ingested']}")
-        
+
     except Exception as e:
         error_msg = f"Error in Spark logs collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-        
+
     return results
 
 
@@ -2384,20 +2314,20 @@ def collect_and_ingest_spark_metrics(
 ) -> Dict[str, Any]:
     """
     Collect Spark metrics for an application and ingest to Log Analytics.
-    
+
     Args:
         workspace_id: Fabric workspace ID
         session_id: Spark session ID
         application_id: Spark application ID
         custom_config: Optional custom configuration
-        
+
     Returns:
         Dict with collection and ingestion results
     """
     from .collectors import collect_spark_metrics
-    
+
     print(f"STARTING: Starting Spark metrics collection for application {application_id}")
-    
+
     results = {
         "collected": 0,
         "ingested": 0,
@@ -2407,24 +2337,23 @@ def collect_and_ingest_spark_metrics(
         "application_id": application_id,
         "collection_type": "spark_metrics"
     }
-    
+
     try:
         # Get configuration
-        config = custom_config or get_config()
         ingestion_config = get_ingestion_config()
-        
+
         # Collect Spark metrics
         metrics = []
         for metric in collect_spark_metrics(workspace_id, session_id, application_id):
             metrics.append(metric)
             results["collected"] += 1
-            
+
         if not metrics:
             print("WARNING: No Spark metrics collected")
             return results
-            
+
         print(f"PACKAGE: Collected {len(metrics)} Spark metrics")
-        
+
         # Ingest to Log Analytics
         if ingestion_config.get("enabled", True):
             ingestion_result = post_rows_to_dcr_enhanced(
@@ -2434,20 +2363,20 @@ def collect_and_ingest_spark_metrics(
                 ingestion_config["stream_name"],
                 ingestion_config["table_name"]
             )
-            
+
             results["ingested"] = ingestion_result.get("ingested_count", 0)
             if ingestion_result.get("errors"):
                 results["errors"].extend(ingestion_result["errors"])
-                
-        print(f"SUCCESS: Spark metrics workflow completed")
+
+        print("SUCCESS: Spark metrics workflow completed")
         print(f"   Collected: {results['collected']}")
         print(f"   Ingested: {results['ingested']}")
-        
+
     except Exception as e:
         error_msg = f"Error in Spark metrics collection: {str(e)}"
         results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-        
+
     return results
 
 
@@ -2462,7 +2391,7 @@ def comprehensive_spark_monitoring(
 ) -> Dict[str, Any]:
     """
     Comprehensive Spark monitoring workflow that collects applications, logs, and metrics.
-    
+
     Args:
         workspace_id: Fabric workspace ID
         lookback_hours: Hours to look back for applications
@@ -2471,12 +2400,12 @@ def comprehensive_spark_monitoring(
         custom_config: Optional custom configuration
         max_applications: Maximum applications to process
         max_log_lines: Maximum log lines per session
-        
+
     Returns:
         Dict with comprehensive results
     """
     print(f"STARTING: Starting comprehensive Spark monitoring for workspace {workspace_id}")
-    
+
     overall_results = {
         "workspace_id": workspace_id,
         "monitoring_type": "comprehensive_spark",
@@ -2487,7 +2416,7 @@ def comprehensive_spark_monitoring(
         "errors": [],
         "details": {}
     }
-    
+
     try:
         # Step 1: Collect Spark applications
         print("Found Step 1: Collecting Spark applications...")
@@ -2497,27 +2426,27 @@ def comprehensive_spark_monitoring(
         overall_results["applications_collected"] = app_results["collected"]
         overall_results["total_ingested"] += app_results["ingested"]
         overall_results["details"]["applications"] = app_results
-        
+
         if app_results["errors"]:
             overall_results["errors"].extend(app_results["errors"])
-            
+
         # Step 2: Collect detailed logs and metrics for recent applications
         if (include_logs or include_metrics) and app_results["collected"] > 0:
             print("Found Step 2: Collecting detailed Spark data...")
-            
+
             # Get recent applications from the collection
             from .collectors import collect_spark_applications_workspace
             recent_apps = []
             for app in collect_spark_applications_workspace(workspace_id, 6, 10):  # Last 6 hours, max 10 apps
                 recent_apps.append(app)
-                
+
             for app in recent_apps:
                 session_id = app.get("SessionId")
                 application_id = app.get("ApplicationId")
-                
+
                 if not session_id:
                     continue
-                    
+
                 try:
                     # Collect logs if requested
                     if include_logs:
@@ -2526,10 +2455,10 @@ def comprehensive_spark_monitoring(
                         )
                         overall_results["logs_collected"] += log_results["collected"]
                         overall_results["total_ingested"] += log_results["ingested"]
-                        
+
                         if log_results["errors"]:
                             overall_results["errors"].extend(log_results["errors"])
-                            
+
                     # Collect metrics if requested and application ID is available
                     if include_metrics and application_id:
                         metrics_results = collect_and_ingest_spark_metrics(
@@ -2537,26 +2466,142 @@ def comprehensive_spark_monitoring(
                         )
                         overall_results["metrics_collected"] += metrics_results["collected"]
                         overall_results["total_ingested"] += metrics_results["ingested"]
-                        
+
                         if metrics_results["errors"]:
                             overall_results["errors"].extend(metrics_results["errors"])
-                            
+
                 except Exception as e:
                     error_msg = f"Error processing application {application_id}: {str(e)}"
                     overall_results["errors"].append(error_msg)
                     print(f"WARNING: {error_msg}")
                     continue
-                    
-        print(f"SUCCESS: Comprehensive Spark monitoring completed")
+
+        print("SUCCESS: Comprehensive Spark monitoring completed")
         print(f"   Applications: {overall_results['applications_collected']}")
         print(f"   Logs: {overall_results['logs_collected']}")
         print(f"   Metrics: {overall_results['metrics_collected']}")
         print(f"   Total ingested: {overall_results['total_ingested']}")
         print(f"   Errors: {len(overall_results['errors'])}")
-        
+
     except Exception as e:
         error_msg = f"Error in comprehensive Spark monitoring: {str(e)}"
         overall_results["errors"].append(error_msg)
         print(f"ERROR: {error_msg}")
-        
+
     return overall_results
+
+
+# ── CLI entry point ────────────────────────────────────────────────────────────
+
+def main() -> None:
+    """
+    CLI entry point for fabric-monitor.
+
+    Usage:
+        fabric-monitor validate              # validate config + test auth
+        fabric-monitor validate --ingestion  # ingestion config only
+        fabric-monitor validate --fabric     # Fabric auth config only
+        fabric-monitor                       # show help
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="fabric-monitor",
+        description="FabricLA-Connector — Microsoft Fabric monitoring CLI",
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate configuration and test connectivity",
+    )
+    validate_parser.add_argument(
+        "--ingestion", action="store_true", help="Check ingestion config only"
+    )
+    validate_parser.add_argument(
+        "--fabric", action="store_true", help="Check Fabric auth config only"
+    )
+
+    args = parser.parse_args()
+
+    if args.command == "validate":
+        _cli_validate(
+            config_type=(
+                "ingestion" if args.ingestion else "fabric" if args.fabric else "all"
+            )
+        )
+    else:
+        parser.print_help()
+
+
+def _cli_validate(config_type: str = "all") -> None:
+    """Run the interactive config validation wizard."""
+    from .config import validate_config, get_ingestion_config
+
+    _OK = "✅"
+    _FAIL = "❌"
+    _WARN = "⚠️ "
+
+    print("\n" + "=" * 58)
+    print("  fabric-monitor — configuration validator")
+    print("=" * 58)
+
+    result = validate_config(config_type)
+
+    # ── Environment ──────────────────────────────────────────
+    env = result.get("environment", "local")
+    fabric = result.get("fabric_available", False)
+    print(f"\nEnvironment : {env}{'  (Fabric notebook context)' if fabric else ''}")
+
+    # ── Required fields ──────────────────────────────────────
+    if result["missing_required"]:
+        print(f"\n{_FAIL} Missing required settings:")
+        for item in result["missing_required"]:
+            print(f"     {item}")
+    else:
+        print(f"\n{_OK}  All required settings present")
+
+    # ── Format errors ────────────────────────────────────────
+    if result.get("format_errors"):
+        print(f"\n{_WARN} Format issues:")
+        for item in result["format_errors"]:
+            print(f"     {item}")
+
+    # ── Optional fields ──────────────────────────────────────
+    if result["missing_optional"]:
+        print(f"\n{_WARN} Optional (not required):")
+        for item in result["missing_optional"]:
+            print(f"     {item}")
+
+    # ── Auth connectivity test ────────────────────────────────
+    if config_type in ("all", "fabric") and not result["missing_required"]:
+        print("\nTesting Fabric auth...", end=" ", flush=True)
+        try:
+            token = get_fabric_token()
+            if token:
+                print(f"{_OK}  token acquired")
+            else:
+                print(f"{_FAIL} no token returned")
+        except Exception as exc:
+            print(f"{_FAIL} {exc}")
+
+    # ── DCE connectivity test ─────────────────────────────────
+    if config_type in ("all", "ingestion") and not result["missing_required"]:
+        import requests as _req
+        ingestion_cfg = get_ingestion_config()
+        dce = ingestion_cfg.get("dce_endpoint", "")
+        print("Testing DCE endpoint...", end=" ", flush=True)
+        try:
+            resp = _req.get(dce, timeout=5)
+            # DCE returns 404 on root — that still means it's reachable
+            print(f"{_OK}  reachable (HTTP {resp.status_code})")
+        except Exception as exc:
+            print(f"{_FAIL} unreachable — {exc}")
+
+    # ── Summary ───────────────────────────────────────────────
+    print("\n" + "-" * 58)
+    if result["valid"] and not result.get("format_errors"):
+        print(f"{_OK}  Configuration is valid. Ready to run.")
+    else:
+        print(f"{_FAIL} Fix the issues above, then re-run: fabric-monitor validate")
+    print()

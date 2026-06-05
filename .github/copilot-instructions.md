@@ -142,6 +142,20 @@ Key helpers used across the codebase:
 - `validate_workspace_id(id)` — regex UUID validation
 - `create_time_window(lookback_hours)` — returns `(start_iso, end_iso)` tuple
 
+### Telemetry (`telemetry.py`)
+
+- `log_event(event_type, **kwargs)` — emits a structured JSON log line via `logging`
+- `timed_event(event_type, **kwargs)` — context manager; logs the event with `elapsed_ms` on exit
+
+```python
+from fabricla_connector.telemetry import log_event, timed_event
+
+log_event("collection_started", source="pipeline", workspace_id=wid)
+
+with timed_event("ingestion_chunk", chunk=1, records=500, stream="Custom-FabricPipeline_CL"):
+    client.upload(...)  # elapsed_ms logged automatically
+```
+
 ### Monitoring strategy
 
 `FABRIC_MONITORING_STRATEGY` env var (or the `strategy` parameter) controls collection scope:
@@ -209,6 +223,11 @@ See `.env.example` for the full list. Key groups:
 ## Deployment
 
 ```bash
+# Validate config and test connectivity
+fabric-monitor validate
+fabric-monitor validate --ingestion   # ingestion config only
+fabric-monitor validate --fabric      # Fabric auth config only
+
 # Build wheel only (validate package)
 python tools/test_local_build.py --workspace-id <WS_ID> --environment-id <ENV_ID> --skip-upload
 

@@ -11,6 +11,15 @@ from .dataset import DatasetRefreshCollector
 from .capacity import CapacityUtilizationCollector
 from .user_activity import UserActivityCollector
 from .permissions import AccessPermissionsCollector
+from .onelake import OneLakeStorageCollector
+from .spark_job import SparkJobCollector
+from .notebook import NotebookCollector
+from .git_integration import GitIntegrationCollector
+from .data_lineage import DataLineageCollector
+from .semantic_model import SemanticModelCollector
+from .realtime_intelligence import RealTimeIntelligenceCollector
+from .mirroring import MirroringCollector
+from .ml_ai import MLAICollector
 
 # Import Spark collector functions
 from .spark import (
@@ -38,33 +47,6 @@ class _NotImplementedCollector:
             "Track progress at https://github.com/Keayoub/FabricLA-Connector/issues"
         )
 
-
-class OneLakeStorageCollector(_NotImplementedCollector):
-    _name = "OneLakeStorageCollector"
-
-class SparkJobCollector(_NotImplementedCollector):
-    _name = "SparkJobCollector"
-
-class NotebookCollector(_NotImplementedCollector):
-    _name = "NotebookCollector"
-
-class GitIntegrationCollector(_NotImplementedCollector):
-    _name = "GitIntegrationCollector"
-
-class DataLineageCollector(_NotImplementedCollector):
-    _name = "DataLineageCollector"
-
-class SemanticModelCollector(_NotImplementedCollector):
-    _name = "SemanticModelCollector"
-
-class RealTimeIntelligenceCollector(_NotImplementedCollector):
-    _name = "RealTimeIntelligenceCollector"
-
-class MirroringCollector(_NotImplementedCollector):
-    _name = "MirroringCollector"
-
-class MLAICollector(_NotImplementedCollector):
-    _name = "MLAICollector"
 
 # Legacy mapper functions - use new mappers from mappers/ subpackage instead
 # These are exported for backward compatibility
