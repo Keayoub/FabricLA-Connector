@@ -46,7 +46,7 @@ dependencies = [
     # Environment variable management
     "python-dotenv>=1.1.1",
     # Secure transitive dep floor (CVE fixes)
-    "cryptography>=46.0.6",
+    "cryptography>=46.0.7",
     "urllib3>=2.6.3",
 ]
 
