@@ -35,10 +35,10 @@ dependencies = [
     "msal>=1.34.0",
     "requests>=2.33.0",
     # Azure identity + core (used by ingestion client and auth)
-    "azure-identity>=1.16.1",
-    "azure-core>=1.38.0",
+    "azure-identity>=1.25.3",
+    "azure-core>=1.39.0",
     # Azure Monitor ingestion (LogsIngestionClient — required for DCE/DCR upload)
-    "azure-monitor-ingestion>=1.0.0",
+    "azure-monitor-ingestion>=1.1.0",
     # Azure management (used by monitoring detection)
     "azure-mgmt-monitor>=7.0.0,<8.0.0",
     "azure-mgmt-core>=1.6.0",
