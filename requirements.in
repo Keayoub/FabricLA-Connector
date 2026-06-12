@@ -14,8 +14,10 @@ azure-mgmt-core>=1.6.0
 azure-common>=1.1.28
 
 # Environment variable management
-python-dotenv>=1.1.1
+python-dotenv>=1.2.2
 
 # Secure transitive dep floor (CVE fixes)
 cryptography>=46.0.6
 urllib3>=2.6.3
+idna>=3.15
+pyjwt>=2.13.0
