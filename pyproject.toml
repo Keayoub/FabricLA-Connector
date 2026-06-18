@@ -32,7 +32,7 @@ classifiers = [
 keywords = ["microsoft", "fabric", "monitoring", "azure", "log-analytics", "data-collection"]
 dependencies = [
     # Fabric API authentication
-    "msal>=1.34.0",
+    "msal>=1.36.0",
     "requests>=2.33.0",
     # Azure identity + core (used by ingestion client and auth)
     "azure-identity>=1.16.1",
